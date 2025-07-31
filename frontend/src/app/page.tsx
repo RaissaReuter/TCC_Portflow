@@ -5,7 +5,7 @@ import axios from "axios"
 import 'react-day-picker/dist/style.css'
 // ... outras importações
 import Chatbot from "../components/Chatbot"; 
-
+import SimuladorRedacao from "../components/SimuladorRedacao";
 // MELHORIA: Definindo tipos para nossos dados
 interface User {
   _id: string;
@@ -63,9 +63,13 @@ export default function Home() {
       setUser(user);
       setCurrentPage("dashboard");
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Erro no login:", err);
-      setError(err.response?.data?.message || "Não foi possível fazer o login.");
+      if (err && typeof err === "object" && "response" in err && err.response && typeof err.response === "object" && "data" in err.response && err.response.data && typeof err.response.data === "object" && "message" in err.response.data) {
+        setError((err.response as { data: { message?: string } }).data.message || "Não foi possível fazer o login.");
+      } else {
+        setError("Não foi possível fazer o login.");
+      }
     }
   };
 
@@ -85,9 +89,13 @@ export default function Home() {
       alert("Cadastro realizado com sucesso! Faça o login para continuar.");
       setCurrentPage("login");
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Erro no cadastro:", err);
-      setError(err.response?.data?.message || "Não foi possível fazer o cadastro.");
+      if (err && typeof err === "object" && "response" in err && err.response && typeof err.response === "object" && "data" in err.response && err.response.data && typeof err.response.data === "object" && "message" in err.response.data) {
+        setError((err.response as { data: { message?: string } }).data.message || "Não foi possível fazer o cadastro.");
+      } else {
+        setError("Não foi possível fazer o cadastro.");
+      }
     }
   };
 
@@ -549,7 +557,7 @@ const renderHomePage = () => (
     </div>
   );
 
-    const renderDashboard = () => {
+      const renderDashboard = () => {
     if (!dashboardData) {
       return <div className="min-h-screen flex items-center justify-center">Carregando Dashboard...</div>;
     }
@@ -557,8 +565,7 @@ const renderHomePage = () => (
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="fixed left-0 top-0 h-full w-16 bg-white border-r border-gray-200 flex flex-col items-center py-4 space-y-4 z-40">
-          {/* ... (código do Sidebar) ... */}
-           <div className="w-10 h-10 bg-gradient-to-br from-orange-300 to-orange-400 rounded-xl flex items-center justify-center shadow-lg">
+          <div className="w-10 h-10 bg-gradient-to-br from-orange-300 to-orange-400 rounded-xl flex items-center justify-center shadow-lg">
             <span className="text-lg">🐱</span>
           </div>
           <div className="flex flex-col space-y-3">
@@ -668,11 +675,33 @@ const renderHomePage = () => (
                 )}
               </div>
             </div>
-             {/* ... (resto do dashboard) ... */ }
+            
+            {/* === NOVA SEÇÃO ADICIONADA AQUI === */}
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-800 mb-6">Pratique e Melhore</h2>
+              <div className="grid md:grid-cols-2 gap-6">
+                
+                <div 
+                  onClick={() => setCurrentPage("simuladorRedacao")}
+                  className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-bold text-gray-800 mb-2">Simulador de Redação com IA</h3>
+                      <p className="text-sm text-gray-600">Receba feedback instantâneo e melhore sua escrita para o ENEM.</p>
+                    </div>
+                    <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center ml-4">
+                      <span className="text-xl">✍️</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+             {/* ... (o resto do dashboard pode vir aqui) ... */ }
           </div>
         </div>
         
-        {/* ADICIONADO AQUI */}
         <Chatbot />
 
       </div>
@@ -682,13 +711,29 @@ const renderHomePage = () => (
   // --- RENDERIZADOR PRINCIPAL ---
 
   switch(currentPage) {
-    case "register":
-      return renderRegisterPage();
-    case "login":
-      return renderLoginPage();
-    case "dashboard":
-      return renderDashboard();
-    default:
-      return renderHomePage();
-  }
+  case "register":
+    return renderRegisterPage();
+  case "login":
+    return renderLoginPage();
+  case "dashboard":
+    return renderDashboard();
+  // NOVO CASE AQUI
+  case "simuladorRedacao":
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Botão para voltar ao Dashboard */}
+          <button 
+            onClick={() => setCurrentPage("dashboard")}
+            className="mb-4 text-teal-600 font-semibold hover:underline"
+          >
+            ← Voltar para o Dashboard
+          </button>
+          <SimuladorRedacao />
+        </div>
+      </div>
+    );
+  default:
+    return renderHomePage();
+}
 }
