@@ -6,7 +6,7 @@ import userRoutes from './routes/userRoutes';
 import authRoutes from './routes/authRoutes';   
 import dashboardRoutes from './routes/dashboardRoutes';
 import chatbotRoutes from './routes/chatbotRoutes';
-
+import redacaoRoutes from './routes/redacaoRoutes';
 dotenv.config();
 connectDB(); // <-- 2. Chamar a função de conexão
 
@@ -22,7 +22,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/chatbot', chatbotRoutes); // <-- 3. Adicionar rota do chatbot
-
+app.use('/api/redacao', redacaoRoutes);
 // Rota de Teste de Saúde
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'PortFlow API is running!' });
