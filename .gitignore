@@ -12,3 +12,5 @@ frontend/out
 
 # Backend específico
 backend/build
+
+package-lock.json

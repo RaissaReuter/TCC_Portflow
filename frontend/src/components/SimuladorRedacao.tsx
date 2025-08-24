@@ -4,7 +4,7 @@
 import { useState } from "react";
 import axios from "axios";
 
-// No futuro, podemos buscar os temas do backend
+// ainda não puxa no back
 const TEMAS_INICIAIS = [
   "O estigma associado às doenças mentais na sociedade brasileira",
   "Desafios para a valorização de comunidades e povos tradicionais no Brasil",
@@ -15,7 +15,7 @@ const TEMAS_INICIAIS = [
 // Interface para a resposta da nossa API de IA
 interface AnaliseIA {
   reply: string; // A IA nos dará um feedback em texto
-  // Poderíamos adicionar uma nota aqui no futuro, ex: score: number;
+  //ainda precisa adicionar nota
 }
 
 export default function SimuladorRedacao() {
