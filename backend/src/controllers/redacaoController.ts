@@ -38,7 +38,7 @@ export const analisarRedacao = async (req: AuthRequest, res: Response) => {
         { role: "user", content: userMessageContent } // Usando o novo formato
       ],
       temperature: 0.7,
-      max_tokens: 1500,
+    
     });
 
     const assistantResponse = completion.choices[0].message.content;
