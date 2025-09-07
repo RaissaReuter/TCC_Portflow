@@ -1,7 +1,7 @@
 // /src/routes/trilhaRoutes.ts
 import { Router } from 'express';
 import { protect } from '../middlewares/authMiddleware';
-import { getListaSecoes, getDetalheSecao } from '../controllers/trilhaController';
+import { getListaSecoes, getDetalheSecao, getDetalheEtapa, completarEtapa} from '../controllers/trilhaController';
 
 const router = Router();
 
@@ -11,6 +11,15 @@ router.get('/', protect, getListaSecoes);
 
 // Rota para os detalhes de uma seção específica
 // GET /api/trilha/secao/1
+// CORREÇÃO: Adicionando a rota que estava faltando
 router.get('/secao/:secaoOrder', protect, getDetalheSecao);
+
+// Rota para os detalhes de uma etapa específica
+// GET /api/trilha/secao/1/etapa/1
+router.get('/secao/:secaoOrder/etapa/:etapaOrder', protect, getDetalheEtapa); 
+
+// Rota para completar uma etapa
+// POST /api/trilha/completar-etapa
+router.post('/completar-etapa', protect, completarEtapa); 
 
 export default router;

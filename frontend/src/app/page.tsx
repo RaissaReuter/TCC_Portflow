@@ -1,11 +1,15 @@
 "use client"
 
+import toast from 'react-hot-toast';
 import { useState, useEffect } from "react"
 import axios from "axios"
 import 'react-day-picker/dist/style.css'
-// ... outras importações
 import Chatbot from "../components/Chatbot"; 
 import SimuladorRedacao from "../components/SimuladorRedacao";
+import ListaSecoes from "../components/ListaSecoes";
+import DetalheSecao from "../components/DetalheSecao";
+import TelaAula from "../components/TelaAula";
+
 // MELHORIA: Definindo tipos para nossos dados
 interface User {
   _id: string;
@@ -37,30 +41,33 @@ export default function Home() {
   const [name, setName] = useState("")
 
   // CORREÇÃO: Usando os tipos que definimos
-  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [secaoAtiva, setSecaoAtiva] = useState<number | null>(null);
+  const [etapaAtiva, setEtapaAtiva] = useState<number | null>(null);
 
   // --- LÓGICA DE AUTENTICAÇÃO E DADOS ---
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsLoading(true); 
 
     try {
       interface LoginResponse {
         token: string;
         user: User;
       }
+  
 
       const response = await axios.post<LoginResponse>('http://localhost:3001/api/auth/login', {
         email,
         password,
       });
 
-      const { token, user } = response.data;
+      const { token } = response.data;
       localStorage.setItem('authToken', token);
-      setUser(user);
       setCurrentPage("dashboard");
 
     } catch (err: unknown) {
@@ -70,7 +77,9 @@ export default function Home() {
       } else {
         setError("Não foi possível fazer o login.");
       }
-    }
+    } finally {
+    setIsLoading(false); // <-- Termina o carregamento (mesmo se der erro)
+  }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -86,7 +95,7 @@ export default function Home() {
         role,
       });
 
-      alert("Cadastro realizado com sucesso! Faça o login para continuar.");
+      toast.success("Cadastro realizado com sucesso!");
       setCurrentPage("login");
 
     } catch (err: unknown) {
@@ -125,6 +134,32 @@ export default function Home() {
       fetchDashboardData();
     }
   }, [currentPage]);
+
+  const AppLayout = ({ children }: { children: React.ReactNode }) => (
+    <div className="min-h-screen bg-gray-50">
+      <div className="flex">
+        <aside className="w-16 bg-white border-r h-screen sticky top-0 flex flex-col items-center py-4 space-y-4 z-40">
+          <div className="w-10 h-10 bg-gradient-to-br from-orange-300 to-orange-400 rounded-xl flex items-center justify-center shadow-lg">
+            <span>🐱</span>
+          </div>
+          <nav className="flex flex-col space-y-3">
+            <div onClick={() => setCurrentPage("dashboard")} className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200">
+              <span>🏠</span>
+            </div>
+            <div onClick={() => setCurrentPage("trilha")} className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200">
+              <span>📚</span>
+            </div>
+          </nav>
+        </aside>
+        <main className="flex-1 p-4 sm:p-8">
+          <div className="max-w-4xl mx-auto">
+            {children}
+          </div>
+        </main>
+      </div>
+      <Chatbot />
+    </div>
+  );
 
 
   // --- FUNÇÕES DE RENDERIZAÇÃO DAS PÁGINAS ---
@@ -442,9 +477,10 @@ const renderHomePage = () => (
           
           <button
             type="submit"
+            disabled={isLoading}
             className="w-full bg-teal-600 text-white py-3 rounded-lg font-semibold hover:bg-teal-700 transition-colors"
           >
-            Criar conta
+            {isLoading ? 'Criando...' : 'Criar conta'}
           </button>
         </form>
 
@@ -516,9 +552,10 @@ const renderHomePage = () => (
 
           <button
             type="submit"
+            disabled={isLoading}
             className="w-full bg-teal-600 text-white py-3 rounded-lg font-semibold hover:bg-teal-700 transition-colors"
           >
-            Entrar
+            {isLoading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
 
@@ -557,7 +594,7 @@ const renderHomePage = () => (
     </div>
   );
 
-      const renderDashboard = () => {
+  const renderDashboard = () => {
     if (!dashboardData) {
       return <div className="min-h-screen flex items-center justify-center">Carregando Dashboard...</div>;
     }
@@ -569,11 +606,20 @@ const renderHomePage = () => (
             <span className="text-lg">🐱</span>
           </div>
           <div className="flex flex-col space-y-3">
-            <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-teal-200 transition-colors">
+           <div 
+                onClick={() => setCurrentPage("dashboard")}
+                className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-teal-200 transition-colors"
+              >
               <span className="text-sm">🏠</span>
             </div>
             <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
               <span className="text-sm">📚</span>
+              <div 
+                  onClick={() => setCurrentPage("trilha")}
+                  className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"
+                >
+                  <span className="text-sm">📚</span>
+              </div>
             </div>
             <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
               <span className="text-sm">🎯</span>
@@ -733,6 +779,77 @@ const renderHomePage = () => (
         </div>
       </div>
     );
+  // ...
+case "trilha":
+      return (
+        <AppLayout> {/* Usando nosso layout padrão */}
+          <div className="bg-teal-600 text-white p-6 rounded-2xl mb-8">
+            <h1 className="text-3xl font-bold">Trilha ENEM</h1>
+            <p>Vamos estudar com qualidade? O Portinho preparou a rota completa até o ENEM</p>
+          </div>
+          
+          {/* CORREÇÃO AQUI: Usando o componente ListaSecoes */}
+          <ListaSecoes 
+            onSecaoClick={(order) => {
+              setSecaoAtiva(order);
+              setCurrentPage("detalheSecao");
+            }} 
+          />
+        </AppLayout>
+      );
+  case "detalheSecao":
+  // Adicionamos uma checagem para garantir que temos uma seção ativa
+    if (secaoAtiva === null) {
+      setCurrentPage("trilha"); // Se não tiver, volta para a lista
+      return null;
+    }
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="flex">
+          {/* Sidebar Fictícia */}
+          <div className="w-16 bg-white border-r h-screen sticky top-0"></div>
+          <main className="flex-1 p-4 sm:p-8">
+            <div className="max-w-4xl mx-auto">
+              <button 
+                onClick={() => setCurrentPage("trilha")}
+                className="mb-4 text-teal-600 font-semibold hover:underline"
+              >
+                &larr; Voltar para a Trilha ENEM
+              </button>
+              <DetalheSecao 
+                  secaoOrder={secaoAtiva} 
+                  onEtapaClick={(orderDaEtapaClicada) => {
+                    setEtapaAtiva(orderDaEtapaClicada);
+                    setCurrentPage("telaAula");
+                  }}
+                />
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+
+    case "telaAula":
+  if (secaoAtiva === null || etapaAtiva === null) {
+    setCurrentPage("trilha");
+    return null;
+  }
+  return (
+    <AppLayout>
+      <TelaAula 
+        secaoOrder={secaoAtiva} 
+        etapaOrder={etapaAtiva}
+        onVoltar={() => setCurrentPage("detalheSecao")}
+        onEtapaConcluida={() => {
+    // Simplesmente volta para a tela de detalhes da seção.
+    // O componente DetalheSecao vai buscar os dados novamente
+    // e mostrará a nova etapa como ativa.
+    setCurrentPage("detalheSecao");
+  }}
+      />
+    </AppLayout>
+  );
+
   default:
     return renderHomePage();
 }

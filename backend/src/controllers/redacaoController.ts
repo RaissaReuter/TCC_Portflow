@@ -13,13 +13,23 @@ const redacaoSchema = z.object({
   texto: z.string().min(50, "A redação precisa ter no mínimo 50 caracteres.").max(5000, "A redação é muito longa (máximo 5000 caracteres)."),
 });
 
+const truncarTexto = (texto: string, maxLength: number): string => {
+  if (texto.length <= maxLength) {
+    return texto;
+  }
+  return texto.substring(0, maxLength); // Removemos o aviso para não confundir a IA
+};
+
 export const analisarRedacao = async (req: AuthRequest, res: Response) => {
+  console.log("Iniciando análise de redação...");
   try {
+    console.log("Verificando configuração da OpenAI...");
     if (!openai) {
       return res.status(503).json({ 
         message: "Serviço de análise de redação temporariamente indisponível. Configure a chave da OpenAI." 
       });
     }
+
 
     const { tema, texto } = redacaoSchema.parse(req.body);
     const user = req.user;
@@ -29,6 +39,7 @@ export const analisarRedacao = async (req: AuthRequest, res: Response) => {
     }
 
     const systemPrompt = `Você é um professor especialista em redação ENEM. Analise a redação fornecida e forneça feedback construtivo sobre: estrutura, argumentação, coesão, coerência, gramática e adequação ao tema. Seja didático e encorajador.`;
+    
     const userMessageContent = `Tema: ${tema}\n\nTexto da redação:\n${texto}\n\nPor favor, analise esta redação e forneça feedback detalhado.`;
 
     const completion = await openai.chat.completions.create({

@@ -92,7 +92,7 @@ export default function Chatbot() {
             ))}
             {isLoading && (
               <div className="flex items-start gap-2.5">
-                <Image src="https://i.ibb.co/L5hP0V2/gato-1.png" alt="Portinho" width={32} height={32} className="w-8 h-8 rounded-full" />
+                <Image src="/images/logoPortinho.png" alt="Portinho" width={32} height={32} className="w-8 h-8 rounded-full" />
                 <div className="flex flex-col max-w-[200px] leading-1.5 p-2 border-gray-200 bg-gray-100 rounded-e-xl rounded-es-xl">
                   <p className="text-sm font-normal">Digitando...</p>
                 </div>
@@ -129,7 +129,7 @@ export default function Chatbot() {
         onClick={() => setIsOpen(true)}
         className="bg-blue-500 text-white rounded-full p-4 shadow-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-transform duration-300 hover:scale-110"
       >
-        <Image src="https://i.ibb.co/L5hP0V2/gato-1.png" alt="Abrir Chat" width={40} height={40} className="w-10 h-10" />
+        <Image src="/images/logoPortinho.png" alt="Abrir Chat" width={60} height={60} className="w-10 h-10" />
       </button>
     </div>
   );

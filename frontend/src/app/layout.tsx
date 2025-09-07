@@ -1,7 +1,9 @@
+import { Toaster } from 'react-hot-toast';
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import 'react-day-picker/dist/style.css'
 import "./globals.css"
+
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -10,14 +12,13 @@ export const metadata: Metadata = {
   description: "A modern and elegant landing page built with Next.js and Tailwind CSS",
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        {children}
+        <Toaster position="top-center" /> {/* 2. Adicionar o componente */}
+      </body>
     </html>
   )
 }
