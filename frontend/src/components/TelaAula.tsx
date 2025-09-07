@@ -8,6 +8,7 @@ import axios from 'axios';
 // --- INTERFACES ---
 interface IEtapa {
   title: string;
+  content: string;
   // Futuramente, aqui teremos o conteúdo da aula, quiz, etc.
 }
 
@@ -82,9 +83,8 @@ export default function TelaAula({ secaoOrder, etapaOrder, onVoltar, onEtapaConc
         <h1 className="text-3xl font-bold text-gray-800 mb-4">{etapa.title}</h1>
         
         <div className="prose lg:prose-xl max-w-none">
-          {/* Aqui virá o conteúdo real da aula */}
-          <p>Conteúdo da aula em construção...</p>
-          <p>Esta página exibirá o texto, vídeos e o quiz relacionados a <strong>{etapa.title}</strong>.</p>
+          {/* CORREÇÃO: Renderizando o conteúdo HTML do backend */}
+          <div dangerouslySetInnerHTML={{ __html: etapa.content }} />
         </div>
 
         {/* CORREÇÃO: Apenas um botão, no lugar certo, com a função conectada */}
