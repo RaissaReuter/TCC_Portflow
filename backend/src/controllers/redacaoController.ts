@@ -38,8 +38,18 @@ export const analisarRedacao = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ message: "Usuário não autenticado." });
     }
 
-    const systemPrompt = `Você é um professor especialista em redação ENEM. Analise a redação fornecida e forneça feedback construtivo sobre: estrutura, argumentação, coesão, coerência, gramática e adequação ao tema. Seja didático e encorajador.`;
-    
+    const systemPrompt = `...
+O JSON de saída deve ter a seguinte estrutura:
+{
+  "analiseGeral": "...",
+  "pontosFortes": [...],
+  "pontosAMelhorar": [...],
+  "sugestaoFinal": "...",
+  "errosSugeridos": [
+    { "palavra": "palavra_errada_encontrada_no_texto", "sugestao": "sugestão_de_correção" }
+  ]
+}
+Identifique até 3 erros ortográficos ou gramaticais simples no texto e preencha o array 'errosSugeridos'. Se não houver erros claros, retorne um array vazio [].`;
     const userMessageContent = `Tema: ${tema}\n\nTexto da redação:\n${texto}\n\nPor favor, analise esta redação e forneça feedback detalhado.`;
 
     const completion = await openai.chat.completions.create({

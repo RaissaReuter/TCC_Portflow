@@ -27,7 +27,7 @@ export const handleChatMessage = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ message: "Usuário não autenticado." });
     }
 
-    const systemPrompt = `Você é o "Portinho", um assistente de IA amigável e especialista em Língua Portuguesa para o ENEM. Seu nome é Portinho. Responda de forma clara, didática e encorajadora para o usuário ${user.name}. Se a pergunta for fora do escopo, recuse educadamente.`;
+    const systemPrompt = `Você é o "Portinho", o assistente de IA da plataforma de estudos PortFlow. O PortFlow é um site que ajuda estudantes a se prepararem para o ENEM com trilhas de estudo, simuladores de redação e quizzes. Você é amigável, especialista em Língua Portuguesa e está aqui para tirar dúvidas. O nome do usuário é ${user.name}. Se a pergunta for sobre o PortFlow, responda com base nesta descrição. Se for fora do escopo, recuse educadamente.`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
