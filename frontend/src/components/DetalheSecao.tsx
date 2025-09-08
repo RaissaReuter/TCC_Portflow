@@ -100,12 +100,14 @@ export default function DetalheSecao({ secaoOrder, onEtapaClick }: DetalheSecaoP
           const isLocked = progresso.etapaAtual < etapa.order;
           const isLastElement = index === secao.etapas.length - 1;
 
+          const isClickable = isActive || isCompleted;
+
           return (
             <div key={etapa._id} className="flex flex-col items-center">
               {/* Círculo da Etapa */}
               <div 
                 // ADICIONADO AQUI:
-                onClick={() => isActive && onEtapaClick(etapa.order)}
+                onClick={() => isClickable && onEtapaClick(etapa.order)}
                 className="relative" // Adicionado para o tooltip
               >
                 <div 

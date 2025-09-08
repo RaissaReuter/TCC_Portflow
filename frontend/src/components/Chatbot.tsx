@@ -83,7 +83,7 @@ export default function Chatbot() {
             {messages.map((msg, index) => (
               <div key={index} className={`flex items-start gap-2.5 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
                 {msg.sender === 'assistant' && (
-                  <Image src="https://i.ibb.co/L5hP0V2/gato-1.png" alt="Portinho" width={32} height={32} className="w-8 h-8 rounded-full" />
+                  <Image src="/images/logoPortinho.png" alt="Portinho" width={32} height={32} className="w-8 h-8 rounded-full" />
                 )}
                 <div className={`flex flex-col max-w-[200px] leading-1.5 p-2 border-gray-200 ${msg.sender === 'user' ? 'bg-blue-500 text-white rounded-s-xl rounded-ee-xl' : 'bg-gray-100 rounded-e-xl rounded-es-xl'}`}>
                   <p className="text-sm font-normal">{msg.text}</p>
