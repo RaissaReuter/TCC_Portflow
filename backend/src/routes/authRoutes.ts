@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import { loginUser } from '../controllers/authController';
+import { loginUser, googleLogin, getMe } from '../controllers/authController';
+import { protect } from '../middlewares/authMiddleware';
 
 const router = Router();
 
-// Rota para login de usuário
-// POST /api/auth/login
 router.post('/login', loginUser);
+router.post('/google', googleLogin);
+router.get('/me', protect, getMe);
 
 export default router;

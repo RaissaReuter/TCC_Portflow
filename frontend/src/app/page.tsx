@@ -9,8 +9,10 @@ import SimuladorRedacao from "../components/SimuladorRedacao";
 import ListaSecoes from "../components/ListaSecoes";
 import DetalheSecao from "../components/DetalheSecao";
 import TelaAula from "../components/TelaAula";
+import { GoogleOAuthProvider, GoogleLogin, CredentialResponse } from '@react-oauth/google';
 
-// MELHORIA: Definindo tipos para nossos dados
+
+// --- INTERFACES ---
 interface User {
   _id: string;
   name: string;
@@ -35,20 +37,40 @@ interface DashboardData {
 
 
 export default function Home() {
-  const [currentPage, setCurrentPage] = useState("home")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [name, setName] = useState("")
-
-  // CORREÇÃO: Usando os tipos que definimos
+  // --- BLOCO DE ESTADOS UNIFICADO E CORRIGIDO ---
+  const [currentPage, setCurrentPage] = useState("home");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  
+  // Estados para navegação da trilha
   const [secaoAtiva, setSecaoAtiva] = useState<number | null>(null);
   const [etapaAtiva, setEtapaAtiva] = useState<number | null>(null);
+  
+  // Estado "gatilho" para forçar a atualização da lista de seções
+  const [refreshTrilha, setRefreshTrilha] = useState(0);
+
+  // --- 1. NOVO ESTADO PARA SINALIZAR A VERIFICAÇÃO DA SESSÃO ---
+  const [userSessionChecked, setUserSessionChecked] = useState(false);
+
+
+  // --- LÓGICA DE SESSÃO PERSISTENTE ---
+  useEffect(() => {
+    const checkUserSession = () => {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        setCurrentPage('dashboard');
+      }
+      // --- 2. SINALIZA QUE A VERIFICAÇÃO FOI CONCLUÍDA ---
+      setUserSessionChecked(true);
+    };
+    checkUserSession();
+  }, []); // Array de dependências vazio está correto, roda apenas uma vez.
 
   // --- LÓGICA DE AUTENTICAÇÃO E DADOS ---
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -60,7 +82,6 @@ export default function Home() {
         user: User;
       }
   
-
       const response = await axios.post<LoginResponse>('http://localhost:3001/api/auth/login', {
         email,
         password,
@@ -71,16 +92,37 @@ export default function Home() {
       setCurrentPage("dashboard");
 
     } catch (err: unknown) {
-      console.error("Erro no login:", err);
       if (err && typeof err === "object" && "response" in err && err.response && typeof err.response === "object" && "data" in err.response && err.response.data && typeof err.response.data === "object" && "message" in err.response.data) {
         setError((err.response as { data: { message?: string } }).data.message || "Não foi possível fazer o login.");
       } else {
         setError("Não foi possível fazer o login.");
       }
     } finally {
-    setIsLoading(false); // <-- Termina o carregamento (mesmo se der erro)
-  }
+      setIsLoading(false);
+    }
   };
+
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    setError("");
+    setIsLoading(true);
+    try {
+      const response = await axios.post<{ token: string }>('http://localhost:3001/api/auth/google', {
+        credential: credentialResponse.credential,
+      });
+      
+      const { token } = response.data;
+      localStorage.setItem('authToken', token);
+      setCurrentPage("dashboard");
+      toast.success("Login com Google bem-sucedido!");
+
+    } catch (err) {
+      setError("Não foi possível fazer o login com o Google.");
+      console.error("Erro no login com Google:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,7 +141,6 @@ export default function Home() {
       setCurrentPage("login");
 
     } catch (err: unknown) {
-      console.error("Erro no cadastro:", err);
       if (err && typeof err === "object" && "response" in err && err.response && typeof err.response === "object" && "data" in err.response && err.response.data && typeof err.response.data === "object" && "message" in err.response.data) {
         setError((err.response as { data: { message?: string } }).data.message || "Não foi possível fazer o cadastro.");
       } else {
@@ -109,7 +150,9 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (currentPage === 'dashboard') {
+    // A condição 'userSessionChecked' garante que só buscamos os dados
+    // depois de termos certeza se há um token ou não.
+    if (currentPage === 'dashboard' && userSessionChecked) {
       const fetchDashboardData = async () => {
         const token = localStorage.getItem('authToken');
         if (!token) {
@@ -133,7 +176,7 @@ export default function Home() {
 
       fetchDashboardData();
     }
-  }, [currentPage]);
+  }, [currentPage, userSessionChecked]); // --- 3. ADICIONADO userSessionChecked AO ARRAY DE DEPENDÊNCIAS ---
 
   const AppLayout = ({ children }: { children: React.ReactNode }) => (
     <div className="min-h-screen bg-gray-50">
@@ -163,7 +206,7 @@ export default function Home() {
 
 
   // --- FUNÇÕES DE RENDERIZAÇÃO DAS PÁGINAS ---
-const renderHomePage = () => (
+  const renderHomePage = () => (
     <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="bg-white/95 backdrop-blur-sm border-b border-gray-200 px-4 py-4 sticky top-0 z-50">
@@ -521,6 +564,7 @@ const renderHomePage = () => (
   );
 
   const renderLoginPage = () => (
+    <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID !}>
     <div className="min-h-screen bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
         <div className="text-center mb-6">
@@ -570,14 +614,7 @@ const renderHomePage = () => (
           </div>
 
           <div className="mt-4 flex space-x-4">
-            <button className="flex-1 flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-              <span className="text-xl mr-2">G</span>
-              Google
-            </button>
-            <button className="flex-1 flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-              <span className="text-xl mr-2">f</span>
-              Facebook
-            </button>
+            <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => setError("Falha no login com Google.")} />
           </div>
         </div>
 
@@ -592,6 +629,7 @@ const renderHomePage = () => (
         </p>
       </div>
     </div>
+    </GoogleOAuthProvider>
   );
 
   const renderDashboard = () => {
@@ -612,15 +650,7 @@ const renderHomePage = () => (
               >
               <span className="text-sm">🏠</span>
             </div>
-            <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
-              <span className="text-sm">📚</span>
-              <div 
-                  onClick={() => setCurrentPage("trilha")}
-                  className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"
-                >
-                  <span className="text-sm">📚</span>
-              </div>
-            </div>
+            <div onClick={() => setCurrentPage("trilha")} className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors" > <span className="text-sm">📚</span> </div>
             <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
               <span className="text-sm">🎯</span>
             </div>
@@ -722,7 +752,6 @@ const renderHomePage = () => (
               </div>
             </div>
             
-            {/* === NOVA SEÇÃO ADICIONADA AQUI === */}
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-gray-800 mb-6">Pratique e Melhore</h2>
               <div className="grid md:grid-cols-2 gap-6">
@@ -744,7 +773,6 @@ const renderHomePage = () => (
 
               </div>
             </div>
-             {/* ... (o resto do dashboard pode vir aqui) ... */ }
           </div>
         </div>
         
@@ -755,20 +783,16 @@ const renderHomePage = () => (
   }
 
   // --- RENDERIZADOR PRINCIPAL ---
-
   switch(currentPage) {
-  case "register":
-    return renderRegisterPage();
-  case "login":
-    return renderLoginPage();
-  case "dashboard":
-    return renderDashboard();
-  // NOVO CASE AQUI
-  case "simuladorRedacao":
-    return (
-      <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Botão para voltar ao Dashboard */}
+    case "register":
+      return renderRegisterPage();
+    case "login":
+      return renderLoginPage();
+    case "dashboard":
+      return renderDashboard();
+    case "simuladorRedacao":
+      return (
+        <AppLayout>
           <button 
             onClick={() => setCurrentPage("dashboard")}
             className="mb-4 text-teal-600 font-semibold hover:underline"
@@ -776,81 +800,69 @@ const renderHomePage = () => (
             ← Voltar para o Dashboard
           </button>
           <SimuladorRedacao />
-        </div>
-      </div>
-    );
-  // ...
-case "trilha":
+        </AppLayout>
+      );
+    
+    case "trilha":
       return (
-        <AppLayout> {/* Usando nosso layout padrão */}
+        <AppLayout>
           <div className="bg-teal-600 text-white p-6 rounded-2xl mb-8">
             <h1 className="text-3xl font-bold">Trilha ENEM</h1>
             <p>Vamos estudar com qualidade? O Portinho preparou a rota completa até o ENEM</p>
           </div>
-          
-          {/* CORREÇÃO AQUI: Usando o componente ListaSecoes */}
           <ListaSecoes 
             onSecaoClick={(order) => {
               setSecaoAtiva(order);
               setCurrentPage("detalheSecao");
-            }} 
+            }}
+            refreshTrigger={refreshTrilha}
           />
         </AppLayout>
       );
-  case "detalheSecao":
-  // Adicionamos uma checagem para garantir que temos uma seção ativa
-    if (secaoAtiva === null) {
-      setCurrentPage("trilha"); // Se não tiver, volta para a lista
-      return null;
-    }
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="flex">
-          {/* Sidebar Fictícia */}
-          <div className="w-16 bg-white border-r h-screen sticky top-0"></div>
-          <main className="flex-1 p-4 sm:p-8">
-            <div className="max-w-4xl mx-auto">
-              <button 
-                onClick={() => setCurrentPage("trilha")}
-                className="mb-4 text-teal-600 font-semibold hover:underline"
-              >
-                &larr; Voltar para a Trilha ENEM
-              </button>
-              <DetalheSecao 
-                  secaoOrder={secaoAtiva} 
-                  onEtapaClick={(orderDaEtapaClicada) => {
-                    setEtapaAtiva(orderDaEtapaClicada);
-                    setCurrentPage("telaAula");
-                  }}
-                />
-            </div>
-          </main>
-        </div>
-      </div>
-    );
+
+    case "detalheSecao":
+      if (secaoAtiva === null) {
+        setCurrentPage("trilha");
+        return null;
+      }
+      return (
+        <AppLayout>
+          <button 
+            onClick={() => setCurrentPage("trilha")}
+            className="mb-4 text-teal-600 font-semibold hover:underline"
+          >
+            &larr; Voltar para a Trilha ENEM
+          </button>
+          <DetalheSecao 
+              secaoOrder={secaoAtiva} 
+              onEtapaClick={(orderDaEtapaClicada) => {
+                setEtapaAtiva(orderDaEtapaClicada);
+                setCurrentPage("telaAula");
+              }}
+            />
+        </AppLayout>
+      );
 
     case "telaAula":
-  if (secaoAtiva === null || etapaAtiva === null) {
-    setCurrentPage("trilha");
-    return null;
-  }
-  return (
-    <AppLayout>
-      <TelaAula 
-        secaoOrder={secaoAtiva} 
-        etapaOrder={etapaAtiva}
-        onVoltar={() => setCurrentPage("detalheSecao")}
-        onEtapaConcluida={() => {
-    // Simplesmente volta para a tela de detalhes da seção.
-    // O componente DetalheSecao vai buscar os dados novamente
-    // e mostrará a nova etapa como ativa.
-    setCurrentPage("detalheSecao");
-  }}
-      />
-    </AppLayout>
-  );
+      if (secaoAtiva === null || etapaAtiva === null) {
+        setCurrentPage("trilha");
+        return null;
+      }
+      return (
+        <AppLayout>
+          <TelaAula 
+            secaoOrder={secaoAtiva} 
+            etapaOrder={etapaAtiva}
+            onVoltar={() => setCurrentPage("detalheSecao")}
+            onEtapaConcluida={() => {
+              setRefreshTrilha(prev => prev + 1);
+              setCurrentPage("detalheSecao");
+            }}
+          />
+        </AppLayout>
+      );
 
-  default:
-    return renderHomePage();
-}
+    default:
+      return renderHomePage();
+  }
 }

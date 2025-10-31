@@ -1,4 +1,3 @@
-// src/components/ListaSecoes.tsx
 "use client"
 
 import { useState, useEffect } from 'react';
@@ -31,9 +30,10 @@ interface ListaSecoesResponse {
 
 interface ListaSecoesProps {
   onSecaoClick: (secaoOrder: number) => void;
+  refreshTrigger: number; // <-- NOVA PROP
 }
 
-export default function ListaSecoes({ onSecaoClick }: ListaSecoesProps) {
+export default function ListaSecoes({ onSecaoClick, refreshTrigger }: ListaSecoesProps) {
   const [secoes, setSecoes] = useState<ISecao[]>([]);
   const [progresso, setProgresso] = useState<IProgresso | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,24 +41,30 @@ export default function ListaSecoes({ onSecaoClick }: ListaSecoesProps) {
 
   useEffect(() => {
     const fetchTrilhaData = async () => {
+      // O bloco try começa aqui e deve englobar toda a lógica da requisição
       try {
         const token = localStorage.getItem('authToken');
-        // CORREÇÃO: Dizendo ao Axios qual o tipo de dados esperamos na resposta
-        const response = await axios.get<ListaSecoesResponse>('http://localhost:3001/api/trilha', {
+        const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/trilha`;
+        
+        const response = await axios.get<ListaSecoesResponse>(apiUrl, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        // Agora o TypeScript sabe que response.data tem as propriedades 'secoes' e 'progresso'
+        
+        // Estas linhas PRECISAM estar dentro do try, pois dependem da 'response'
         setSecoes(response.data.secoes);
         setProgresso(response.data.progresso);
+
+      // A chave '}' do try fecha aqui, ANTES do catch
       } catch (err) {
         setError('Não foi possível carregar a trilha. Tente novamente.');
-        console.error(err);
+        console.error("Erro detalhado ao buscar trilha:", err);
       } finally {
         setIsLoading(false);
       }
     };
+
     fetchTrilhaData();
-  }, []);
+  }, [refreshTrigger]); // Dependências vazias para rodar apenas uma vez
 
   if (isLoading) {
     return <div className="text-center p-10">Carregando Trilha...</div>;
@@ -74,8 +80,6 @@ export default function ListaSecoes({ onSecaoClick }: ListaSecoesProps) {
         const isUnlocked = progresso ? secao.order <= progresso.secaoAtual : false;
         const isCurrent = progresso ? secao.order === progresso.secaoAtual : false;
         
-        // Simples cálculo de progresso (ex: 1/10 etapas = 10%)
-        // No futuro, podemos pegar o progresso real da etapa
         const progressoPercentual = isCurrent ? 10 : (isUnlocked && !isCurrent ? 100 : 0);
 
         return (
@@ -113,7 +117,6 @@ export default function ListaSecoes({ onSecaoClick }: ListaSecoesProps) {
                 )}
               </div>
               <div className="hidden sm:block">
-                {/* Você pode criar uma imagem diferente para cada seção no futuro */}
                 <Image src="/images/logoPortinho.png" alt="Mascote Portflow" width={100} height={100} />
               </div>
             </div>

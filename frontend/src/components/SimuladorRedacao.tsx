@@ -100,6 +100,8 @@ export default function SimuladorRedacao() {
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
 
+      console.log("Resposta recebida do backend:", response.data);
+
       setFeedback(response.data.feedback);
       toast.success("Sua redação foi analisada!");
 

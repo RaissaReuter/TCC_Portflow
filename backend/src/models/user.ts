@@ -1,61 +1,83 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-// Interface para definir a estrutura de um documento de usuário
+// --- INTERFACE CORRIGIDA ---
+// Garante que o TypeScript saiba que 'googleId' e 'password' podem existir (e ser opcionais).
 export interface IUser extends Document {
   name: string;
   email: string;
-  password?: string; // Opcional, pois não queremos que retorne em todas as consultas
+  password?: string;
   role: 'aluno' | 'professor';
+  googleId?: string;
   comparePassword(password: string): Promise<boolean>;
 }
 
-// Schema do Mongoose
+// --- SCHEMA CORRIGIDO ---
 const UserSchema: Schema<IUser> = new Schema({
-  name: {
-    type: String,
-    required: true,
+  name: { 
+    type: String, 
+    required: true 
   },
-  email: {
-    type: String,
-    required: true,
-    unique: true, // Garante que não teremos e-mails duplicados
-    lowercase: true,
+  email: { 
+    type: String, 
+    required: true, 
+    unique: true,
+    // Regex para validar o formato do email
+    match: [/.+\@.+\..+/, 'Por favor, insira um email válido.']
   },
-  password: {
-    type: String,
-    required: true,
-    select: false, // Por padrão, não inclui este campo nas buscas
+  password: { 
+    type: String, 
+    // A senha não é obrigatória, permitindo o cadastro com Google
+    required: false, 
+    // Não retorna a senha em consultas por padrão
+    select: false 
   },
-  role: {
-    type: String,
-    enum: ['aluno', 'professor'], // Garante que o papel seja um desses dois valores
-    required: true,
+  role: { 
+    type: String, 
+    enum: ['aluno', 'professor'], 
+    default: 'aluno' 
   },
-}, {
-  timestamps: true, // Cria os campos createdAt e updatedAt automaticamente
-});
+  googleId: { 
+    type: String, 
+    required: false, 
+    unique: true,
+    // 'sparse' otimiza a indexação de campos únicos que podem ser nulos
+    sparse: true 
+  },
+}, { timestamps: true });
 
-// Middleware "pre-save": Executa ANTES de um usuário ser salvo no banco
+
+// --- MÉTODOS DO SCHEMA (MANTIDOS) ---
+
+// Middleware (hook) para criptografar a senha ANTES de salvar o usuário
 UserSchema.pre<IUser>('save', async function (next) {
-  // Se a senha não foi modificada, apenas continue
+  // Roda esta função apenas se a senha foi modificada (ou é nova)
   if (!this.isModified('password') || !this.password) {
     return next();
   }
-  
-  // Gera o hash da senha com um "custo" de 10
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    // Se ocorrer um erro, passamos para o próximo middleware
+    // O TypeScript pode reclamar do tipo de 'error', então podemos ser explícitos
+    if (error instanceof Error) {
+      return next(error);
+    }
+    return next(new Error('Erro ao criptografar a senha.'));
+  }
 });
 
 // Método para comparar a senha fornecida com a senha no banco
 UserSchema.methods.comparePassword = function (password: string): Promise<boolean> {
-  // 'this' refere-se ao documento do usuário
+  // 'this.password' não estará disponível aqui a menos que usemos .select('+password') na consulta
+  if (!this.password) {
+    return Promise.resolve(false);
+  }
   return bcrypt.compare(password, this.password);
 };
 
-// Criando o Model
-const UserModel: Model<IUser> = mongoose.model<IUser>('User', UserSchema);
 
+const UserModel: Model<IUser> = mongoose.model<IUser>('User', UserSchema);
 export default UserModel;
