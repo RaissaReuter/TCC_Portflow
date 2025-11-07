@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image'; // CORREÇÃO: Garantir que a importação correta está aqui
+import Image from 'next/image';
 import toast from 'react-hot-toast';
 
 // --- INTERFACES ---
@@ -25,7 +25,7 @@ export default function SalaDeAulaPage() {
   const [nomeSessao, setNomeSessao] = useState('');
   const [topico, setTopico] = useState('Coerência');
   const [quantidadeQuestoes, setQuantidadeQuestoes] = useState(5);
-  const [duracaoMinutos, setDuracaoMinutos] = useState(5);
+  const [duracaoMinutos, setDuracaoMinutos] = useState(1);
   const [formError, setFormError] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [codigoSessao, setCodigoSessao] = useState('');
@@ -69,7 +69,6 @@ export default function SalaDeAulaPage() {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setSessaoAtiva(response.data);
-        console.log("Dados da sessão recebidos:", response.data);
       } catch (error) {
         console.error("Erro ao buscar status da sessão:", error);
       }
@@ -206,10 +205,28 @@ export default function SalaDeAulaPage() {
         setFeedbackResposta(null);
         setRespostaSelecionada(null);
       }, 1500);
-    } catch (err: unknown) {
-      console.error(err);
+    } catch {
       toast.error("Erro ao enviar resposta.");
       setRespostaSelecionada(null);
+    }
+  };
+
+  const handleFinalizarSessao = async () => {
+    if (!sessaoAtiva) return;
+    const token = localStorage.getItem('authToken');
+    toast.loading('Finalizando atividade...');
+    try {
+      const response = await axios.post<{ sessao: SessaoSala }>(
+        `http://localhost:3001/api/sessoes-sala/${sessaoAtiva._id}/finalizar`,
+        {},
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      toast.dismiss();
+      toast.success('Atividade finalizada!');
+      setSessaoAtiva(response.data.sessao);
+    } catch {
+      toast.dismiss();
+      toast.error("Não foi possível finalizar a atividade.");
     }
   };
 
@@ -238,32 +255,14 @@ export default function SalaDeAulaPage() {
         <div className="bg-white p-8 rounded-2xl shadow-lg">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Criar Nova Sessão de Estudo</h2>
           <form onSubmit={handleCriarSessao} className="space-y-4">
-            <div>
-              <label htmlFor="nomeSessao" className="block text-sm font-medium text-gray-700">Nome da Sessão</label>
-              <input type="text" id="nomeSessao" value={nomeSessao} onChange={(e) => setNomeSessao(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"/>
-            </div>
-            <div>
-              <label htmlFor="topico" className="block text-sm font-medium text-gray-700">Tópico</label>
-              <select id="topico" value={topico} onChange={(e) => setTopico(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500">
-                <option>Coerência</option>
-                <option>Crase</option>
-                <option>Figuras de Linguagem</option>
-              </select>
-            </div>
+            <div><label htmlFor="nomeSessao" className="block text-sm font-medium text-gray-700">Nome da Sessão</label><input type="text" id="nomeSessao" value={nomeSessao} onChange={(e) => setNomeSessao(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"/></div>
+            <div><label htmlFor="topico" className="block text-sm font-medium text-gray-700">Tópico</label><select id="topico" value={topico} onChange={(e) => setTopico(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"><option>Coerência</option><option>Crase</option><option>Figuras de Linguagem</option></select></div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="quantidadeQuestoes" className="block text-sm font-medium text-gray-700">Nº de Questões</label>
-                <input type="number" id="quantidadeQuestoes" value={quantidadeQuestoes} onChange={(e) => setQuantidadeQuestoes(Number(e.target.value))} min="1" max="50" required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"/>
-              </div>
-              <div>
-                <label htmlFor="duracaoMinutos" className="block text-sm font-medium text-gray-700">Duração (minutos)</label>
-                <input type="number" id="duracaoMinutos" value={duracaoMinutos} onChange={(e) => setDuracaoMinutos(Number(e.target.value))} min="1" required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"/>
-              </div>
+              <div><label htmlFor="quantidadeQuestoes" className="block text-sm font-medium text-gray-700">Nº de Questões</label><input type="number" id="quantidadeQuestoes" value={quantidadeQuestoes} onChange={(e) => setQuantidadeQuestoes(Number(e.target.value))} min="1" max="50" required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"/></div>
+              <div><label htmlFor="duracaoMinutos" className="block text-sm font-medium text-gray-700">Duração (minutos)</label><input type="number" id="duracaoMinutos" value={duracaoMinutos} onChange={(e) => setDuracaoMinutos(Number(e.target.value))} min="1" required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"/></div>
             </div>
             {formError && <p className="text-red-500 text-sm">{formError}</p>}
-            <button type="submit" disabled={isCreating} className="w-full bg-teal-600 text-white py-3 rounded-xl font-semibold hover:bg-teal-700 disabled:bg-gray-400">
-              {isCreating ? 'Gerando questões com IA...' : 'Criar Sessão e Gerar Código'}
-            </button>
+            <button type="submit" disabled={isCreating} className="w-full bg-teal-600 text-white py-3 rounded-xl font-semibold hover:bg-teal-700 disabled:bg-gray-400">{isCreating ? 'Gerando questões com IA...' : 'Criar Sessão e Gerar Código'}</button>
           </form>
         </div>
       );
@@ -275,12 +274,7 @@ export default function SalaDeAulaPage() {
           <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Atividade Finalizada!</h2>
           <h3 className="text-xl font-semibold mb-4 text-center">Ranking Final</h3>
           <ol className="space-y-3">
-            {ranking.map((p, index) => (
-              <li key={p.alunoId._id} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
-                <span className="text-lg font-bold">{index + 1}º - {p.alunoId.name}</span>
-                <span className="text-lg font-bold text-teal-600">{p.pontuacao} pts</span>
-              </li>
-            ))}
+            {ranking.map((p, index) => (<li key={p.alunoId._id} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg"><span className="text-lg font-bold">{index + 1}º - {p.alunoId.name}</span><span className="text-lg font-bold text-teal-600">{p.pontuacao} pts</span></li>))}
           </ol>
         </div>
       );
@@ -290,59 +284,29 @@ export default function SalaDeAulaPage() {
         <div className="bg-white p-8 rounded-2xl shadow-lg">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-800">{`Sessão "${sessaoAtiva.nome}"`}</h2>
-            <div className="text-2xl font-bold text-red-500 bg-red-100 px-4 py-2 rounded-lg">
-              {tempoRestante}
-            </div>
+            <div className="text-2xl font-bold text-red-500 bg-red-100 px-4 py-2 rounded-lg">{tempoRestante}</div>
           </div>
           <h3 className="text-lg font-semibold mb-4">Progresso dos Alunos:</h3>
           <div className="space-y-3">
-            {sessaoAtiva.participantes.length > 0 ? (
-              // --- CORREÇÃO AQUI ---
-              sessaoAtiva.participantes
-                .filter(p => p.alunoId && p.alunoId._id) // Garante que o alunoId existe
-                .map((p, index) => (
-                  <div 
-                    key={`${p.alunoId._id}-${index}`} // Chave mais robusta
-                    className="flex justify-between items-center bg-gray-50 p-3 rounded-md"
-                  >
-                    <span>{p.alunoId.name}</span>
-                    <span className="font-semibold">{p.pontuacao} pts</span>
-                  </div>
-                ))
-            ) : (
-              <p className="text-gray-500">Nenhum aluno na sala.</p>
-            )}
+            {sessaoAtiva.participantes.length > 0 ? (sessaoAtiva.participantes.map(p => (<div key={p.alunoId._id} className="flex justify-between items-center bg-gray-50 p-3 rounded-md"><span>{p.alunoId.name}</span><span className="font-semibold">{p.pontuacao} pts</span></div>))) : (<p className="text-gray-500">Nenhum aluno na sala.</p>)}
           </div>
+          <button onClick={handleFinalizarSessao} className="mt-8 w-full bg-red-500 text-white py-3 rounded-xl font-semibold hover:bg-red-600">Encerrar Atividade para Todos</button>
         </div>
       );
     }
-    // Sala de Espera do Professor
     return (
       <div className="bg-white p-8 rounded-2xl shadow-lg text-center">
         <h2 className="text-2xl font-bold text-gray-800 mb-2">{`Sessão "${sessaoAtiva.nome}" criada!`}</h2>
         <p className="text-gray-600 mb-6">Compartilhe o código abaixo com seus alunos:</p>
-        <div className="bg-teal-50 p-4 rounded-lg inline-block mb-6 border-2 border-dashed border-teal-200">
-          <p className="text-4xl font-bold text-teal-600 tracking-widest">{sessaoAtiva.codigo}</p>
-        </div>
+        <div className="bg-teal-50 p-4 rounded-lg inline-block mb-6 border-2 border-dashed border-teal-200"><p className="text-4xl font-bold text-teal-600 tracking-widest">{sessaoAtiva.codigo}</p></div>
         <div className="mt-4 text-left max-w-sm mx-auto">
           <h3 className="font-semibold mb-2 text-center">Alunos na sala ({sessaoAtiva.participantes.length}):</h3>
-          {sessaoAtiva.participantes.length > 0 ? (
-            <ul className="list-disc list-inside bg-gray-50 p-3 rounded-md">
-              {sessaoAtiva.participantes
-                .filter(p => p.alunoId && p.alunoId._id) // Garante que o alunoId existe
-                .map(p => <li key={p.alunoId._id}>{p.alunoId.name}</li>)
-              }
-            </ul>
-          ) : <p className="text-gray-500 text-center">Aguardando alunos...</p>}
+          {sessaoAtiva.participantes.length > 0 ? (<ul className="list-disc list-inside bg-gray-50 p-3 rounded-md">{sessaoAtiva.participantes.map(p => <li key={p.alunoId._id}>{p.alunoId.name}</li>)}</ul>) : <p className="text-gray-500 text-center">Aguardando alunos...</p>}
         </div>
-        <button onClick={handleIniciarSessao} className="mt-8 bg-teal-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-teal-700 w-full">
-          Iniciar Atividade
-        </button>
+        <button onClick={handleIniciarSessao} className="mt-8 bg-teal-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-teal-700 w-full">Iniciar Atividade</button>
       </div>
     );
   };
-
-  // Em sala-de-aula/page.tsx
 
   const renderAlunoView = () => {
     if (!sessaoAtiva) {
@@ -357,7 +321,6 @@ export default function SalaDeAulaPage() {
         </div>
       );
     }
-
     if (sessaoAtiva.status === 'FINALIZADA' || (tempoRestante === '00:00' && sessaoAtiva.status === 'EM_ANDAMENTO')) {
       const ranking = [...sessaoAtiva.participantes].sort((a, b) => b.pontuacao - a.pontuacao);
       const minhaPosicao = ranking.findIndex(p => p.alunoId._id === user?._id) + 1;
@@ -367,17 +330,11 @@ export default function SalaDeAulaPage() {
           <p className="text-lg mb-4">Sua posição: <span className="font-bold text-teal-600">{minhaPosicao > 0 ? `${minhaPosicao}º lugar` : 'N/A'}</span></p>
           <h3 className="text-xl font-semibold mb-4">Ranking Final</h3>
           <ol className="space-y-3 text-left">
-            {ranking.map((p, index) => (
-              <li key={p.alunoId._id} className={`flex items-center justify-between p-4 rounded-lg ${p.alunoId._id === user?._id ? 'bg-teal-100 border-2 border-teal-500' : 'bg-gray-50'}`}>
-                <span>{index + 1}º - {p.alunoId.name}</span>
-                <span className="font-bold">{p.pontuacao} pts</span>
-              </li>
-            ))}
+            {ranking.map((p, index) => (<li key={p.alunoId._id} className={`flex items-center justify-between p-4 rounded-lg ${p.alunoId._id === user?._id ? 'bg-teal-100 border-2 border-teal-500' : 'bg-gray-50'}`}><span>{index + 1}º - {p.alunoId.name}</span><span className="font-bold">{p.pontuacao} pts</span></li>))}
           </ol>
         </div>
       );
     }
-
     if (sessaoAtiva.status === 'EM_ANDAMENTO') {
       const questaoAtual = sessaoAtiva.questoes[indiceQuestaoAtual];
       if (!questaoAtual) {
@@ -391,20 +348,8 @@ export default function SalaDeAulaPage() {
           </div>
           <div className="space-y-4">
             <p className="text-lg text-gray-800 whitespace-pre-wrap">{questaoAtual.enunciado}</p>
-            {questaoAtual.imagemUrl && (
-              <div className="relative w-full h-64 my-4"> 
-                <Image 
-                  src={questaoAtual.imagemUrl} 
-                  alt="Contexto da questão" 
-                  layout="fill" 
-                  objectFit="contain"
-                  className="rounded-lg"
-                />
-              </div>
-            )}
+            {questaoAtual.imagemUrl && (<div className="relative w-full h-64 my-4"><Image src={questaoAtual.imagemUrl} alt="Contexto da questão" layout="fill" objectFit="contain" className="rounded-lg"/></div>)}
             <div className="space-y-3 pt-4">
-              {/* --- CORREÇÃO AQUI --- */}
-              {/* Adicionamos a verificação 'Array.isArray(questaoAtual.alternativas)' */}
               {Array.isArray(questaoAtual.alternativas) && questaoAtual.alternativas.map(alt => {
                 const isSelected = respostaSelecionada === alt.letra;
                 let buttonClass = 'border-gray-200 hover:bg-teal-100 hover:border-teal-500';
@@ -422,14 +367,11 @@ export default function SalaDeAulaPage() {
         </div>
       );
     }
-
-    // Se chegou aqui, o status é 'AGUARDANDO'
-    // Mostra mensagem de aguardo para o aluno e fecha a função renderAlunoView
-
     return (
       <div className="bg-white p-8 rounded-2xl shadow-lg text-center">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Aguardando início da atividade...</h2>
-        <p className="text-gray-600">Por favor, aguarde o professor iniciar a atividade.</p>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Você entrou na sessão!</h2>
+        <p className="text-gray-600 mb-6">Nome da Atividade: <span className="font-bold">{sessaoAtiva.nome}</span></p>
+        <div className="animate-pulse text-teal-600"><p className="text-lg">Aguardando o professor iniciar a atividade...</p></div>
       </div>
     );
   };
@@ -444,10 +386,9 @@ export default function SalaDeAulaPage() {
             </Link>
         </div>
         
-        {/* Verifique se estas três linhas estão exatamente assim */}
         {user && !user.role && renderRoleSelection()}
         {user && user.role === 'professor' && renderProfessorView()}
-        {user && user.role === 'aluno' && renderAlunoView()} 
+        {user && user.role === 'aluno' && renderAlunoView()}
       </div>
     </div>
   );

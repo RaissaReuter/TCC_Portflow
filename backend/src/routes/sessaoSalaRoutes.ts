@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { criarSessao, entrarNaSessao, getStatusSessao, iniciarSessao, responderQuestao } from '../controllers/sessaoSalaController';
+import { criarSessao, entrarNaSessao, getStatusSessao, iniciarSessao, responderQuestao, finalizarSessao } from '../controllers/sessaoSalaController';
 import { protect } from '../middlewares/authMiddleware';
 
 const router = Router();
@@ -18,5 +18,6 @@ router.get('/:id', protect, getStatusSessao);
 router.post('/:id/iniciar', protect, iniciarSessao);
 
 router.post('/responder', protect, responderQuestao);
+router.post('/:id/finalizar', protect, finalizarSessao);
 
 export default router;

@@ -224,3 +224,36 @@ export const responderQuestao = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Erro interno no servidor.' });
   }
 };
+export const finalizarSessao = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = (req as any).user as IUser;
+
+    const sessao = await SessaoSalaModel.findById(id);
+
+    if (!sessao) {
+      return res.status(404).json({ message: 'Sessão não encontrada.' });
+    }
+
+    // Apenas o professor da sessão pode finalizá-la
+    if (String(sessao.professor) !== String(user._id)) {
+      return res.status(403).json({ message: 'Apenas o professor pode finalizar a atividade.' });
+    }
+
+    if (sessao.status === 'FINALIZADA') {
+      return res.status(400).json({ message: 'Esta sessão já foi finalizada.' });
+    }
+
+    sessao.status = 'FINALIZADA';
+    await sessao.save();
+
+    // Populamos os dados antes de enviar de volta, para o ranking funcionar
+    await sessao.populate({ path: 'participantes.alunoId', select: 'name' });
+
+    res.status(200).json({ message: 'Sessão finalizada com sucesso!', sessao });
+
+  } catch (error) {
+    console.error("Erro ao finalizar sessão:", error);
+    res.status(500).json({ message: 'Erro interno no servidor.' });
+  }
+};
