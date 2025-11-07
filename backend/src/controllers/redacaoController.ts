@@ -1,6 +1,5 @@
 // /src/controllers/redacaoController.ts
-import { Response } from 'express';
-import { AuthRequest } from '../middlewares/authMiddleware';
+import { Request, Response } from 'express';
 import OpenAI from 'openai';
 import { z, ZodError } from 'zod';
 
@@ -15,10 +14,10 @@ const redacaoSchema = z.object({
   texto: z.string().min(50, "A redação precisa ter no mínimo 50 caracteres."),
 });
 
-export const analisarRedacao = async (req: AuthRequest, res: Response) => {
+export const analisarRedacao = async (req: Request, res: Response) => {
   try {
     const { tema, texto } = redacaoSchema.parse(req.body);
-    const user = req.user;
+    const user = (req as any).user?._id;
 
     if (!user) {
       return res.status(401).json({ message: "Usuário não autenticado." });

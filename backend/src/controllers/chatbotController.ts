@@ -1,6 +1,5 @@
 // /src/controllers/chatbotController.ts
-import { Response } from 'express';
-import { AuthRequest } from '../middlewares/authMiddleware';
+import { Request, Response } from 'express';
 import OpenAI from 'openai';
 import { z, ZodError } from 'zod';
 
@@ -12,7 +11,7 @@ const chatSchema = z.object({
   message: z.string().min(1, "A mensagem não pode estar vazia.").max(2000, "A mensagem é muito longa (máximo 2000 caracteres)."),
 });
 
-export const handleChatMessage = async (req: AuthRequest, res: Response) => {
+export const handleChatMessage = async (req: Request, res: Response) => {
   try {
     if (!openai) {
       return res.status(503).json({ 
@@ -21,7 +20,7 @@ export const handleChatMessage = async (req: AuthRequest, res: Response) => {
     }
 
     const { message } = chatSchema.parse(req.body);
-    const user = req.user;
+    const user = (req as any).user?._id;
 
     if (!user) {
       return res.status(401).json({ message: "Usuário não autenticado." });

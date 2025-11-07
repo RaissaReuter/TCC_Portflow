@@ -1,13 +1,12 @@
 // /src/controllers/trilhaController.ts
-import { Response } from 'express';
-import { AuthRequest } from '../middlewares/authMiddleware';
 import SecaoModel from '../models/Secao';
 import ProgressoAlunoModel from '../models/ProgressoAluno';
+import{ Request, Response } from 'express';
 
 // Rota para a tela principal (lista de seções)
-export const getListaSecoes = async (req: AuthRequest, res: Response) => {
+export const getListaSecoes = async (req:Request, res: Response) => {
   try {
-    const alunoId = req.user?._id;
+    const alunoId = (req as any).user?._id;
     const secoes = await SecaoModel.find().sort({ order: 1 });
     let progresso = await ProgressoAlunoModel.findOne({ alunoId });
 
@@ -22,9 +21,9 @@ export const getListaSecoes = async (req: AuthRequest, res: Response) => {
 };
 
 // Rota para a tela de uma seção específica
-export const getDetalheSecao = async (req: AuthRequest, res: Response) => {
+export const getDetalheSecao = async (req: Request, res: Response) => {
     try {
-        const alunoId = req.user?._id;
+        const alunoId = (req as any).user?._id;
         const { secaoOrder } = req.params; // Pega a ordem da seção da URL
 
         const secao = await SecaoModel.findOne({ order: Number(secaoOrder) });
@@ -45,7 +44,7 @@ export const getDetalheSecao = async (req: AuthRequest, res: Response) => {
 
 // ... (depois da função getDetalheSecao)
 
-export const getDetalheEtapa = async (req: AuthRequest, res: Response) => {
+export const getDetalheEtapa = async (req: Request, res: Response) => {
   try {
     const { secaoOrder, etapaOrder } = req.params;
 
@@ -78,9 +77,9 @@ export const getDetalheEtapa = async (req: AuthRequest, res: Response) => {
 
 // ... (outras funções do controller permanecem as mesmas)
 
-export const completarEtapa = async (req: AuthRequest, res: Response) => {
+export const completarEtapa = async (req: Request, res: Response) => {
   try {
-    const alunoId = req.user?._id;
+    const alunoId = (req as any).user?._id;
     if (!alunoId) {
       return res.status(400).json({ message: "ID do aluno não encontrado no token." });
     }

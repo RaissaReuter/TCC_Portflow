@@ -1,10 +1,10 @@
 // /src/controllers/dashboardController.ts
-import { Response } from 'express';
-import { AuthRequest } from '../middlewares/authMiddleware';
+import { Request, Response } from 'express';
 
-export const getDashboardData = async (req: AuthRequest, res: Response) => {
+
+export const getDashboardData = async (req: Request, res: Response) => {
   // Graças ao middleware 'protect', já temos os dados do usuário em req.user
-  const user = req.user;
+  const user = (req as any).user?._id;
 
   if (!user) {
     return res.status(401).json({ message: 'Usuário não autenticado.' });
