@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, Suspense } from 'react';
 import axios from 'axios';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -8,16 +8,11 @@ import toast from 'react-hot-toast';
 import { GoogleOAuthProvider, GoogleLogin, CredentialResponse } from '@react-oauth/google';
 
 // Interfaces
-interface ApiErrorData {
-  message: string;
-}
-interface AxiosErrorWithData {
-  response?: {
-    data?: ApiErrorData;
-  };
-}
+interface ApiErrorData { message: string; }
+interface AxiosErrorWithData { response?: { data?: ApiErrorData; }; }
 
-export default function RegisterPage() {
+// Componente filho que usa os hooks
+function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [name, setName] = useState("");
@@ -26,19 +21,6 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Estado para armazenar o redirect
-  const [redirectUrl, setRedirectUrl] = useState('/');
-  const [redirectParam, setRedirectParam] = useState('');
-
-  // Efeito para ler o searchParams APENAS no lado do cliente
-  useEffect(() => {
-    const redirect = searchParams.get('redirect');
-    if (redirect) {
-      setRedirectUrl(redirect);
-      setRedirectParam(`?redirect=${redirect}`);
-    }
-  }, [searchParams]);
-
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -46,7 +28,8 @@ export default function RegisterPage() {
     try {
       await axios.post('http://localhost:3001/api/users/register', { name, email, password });
       toast.success("Cadastro realizado com sucesso! Faça o login.");
-      router.push(`/login${redirectParam}`); // Usa o estado
+      const redirectParam = searchParams.get('redirect') ? `?redirect=${searchParams.get('redirect')}` : '';
+      router.push(`/login${redirectParam}`);
     } catch (err: unknown) {
       let message = "Não foi possível fazer o cadastro.";
       const axiosError = err as AxiosErrorWithData;
@@ -66,7 +49,8 @@ export default function RegisterPage() {
       const response = await axios.post<{ token: string }>('http://localhost:3001/api/auth/google', { credential: credentialResponse.credential });
       localStorage.setItem('authToken', response.data.token);
       toast.success("Cadastro com Google bem-sucedido!");
-      router.push(redirectUrl); // Usa o estado
+      const redirectUrl = searchParams.get('redirect') || '/';
+      router.push(redirectUrl);
     } catch {
       setError("Não foi possível fazer o cadastro com o Google.");
     } finally {
@@ -75,31 +59,43 @@ export default function RegisterPage() {
   };
 
   return (
+    <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Crie uma conta</h2>
+        <p className="text-gray-600">Junte-se à nossa comunidade</p>
+      </div>
+      <form className="space-y-4" onSubmit={handleRegister}>
+        <div><input type="text" placeholder="Nome completo" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" /></div>
+        <div><input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" /></div>
+        <div><input type="password" placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" /></div>
+        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+        <button type="submit" disabled={isLoading} className="w-full bg-teal-600 text-white py-3 rounded-lg font-semibold hover:bg-teal-700 transition-colors">{isLoading ? 'Criando...' : 'Criar conta'}</button>
+      </form>
+      <div className="mt-6">
+        <div className="relative"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Ou continue com</span></div></div>
+        <div className="mt-4 flex justify-center"><GoogleLogin onSuccess={handleGoogleSuccess} onError={() => setError("Falha no cadastro com Google.")} /></div>
+      </div>
+      <p className="mt-6 text-center text-sm text-gray-600">
+        Já tem uma conta?{" "}
+        <Link 
+          href={`/login${searchParams.get('redirect') ? `?redirect=${searchParams.get('redirect')}` : ''}`} 
+          className="text-teal-600 hover:underline"
+        >
+          Faça login
+        </Link>
+      </p>
+    </div>
+  );
+}
+
+// Componente principal que envolve o formulário com Suspense
+export default function RegisterPage() {
+  return (
     <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}>
       <div className="min-h-screen bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Crie uma conta</h2>
-            <p className="text-gray-600">Junte-se à nossa comunidade</p>
-          </div>
-          <form className="space-y-4" onSubmit={handleRegister}>
-            <div><input type="text" placeholder="Nome completo" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" /></div>
-            <div><input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" /></div>
-            <div><input type="password" placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" /></div>
-            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-            <button type="submit" disabled={isLoading} className="w-full bg-teal-600 text-white py-3 rounded-lg font-semibold hover:bg-teal-700 transition-colors">{isLoading ? 'Criando...' : 'Criar conta'}</button>
-          </form>
-          <div className="mt-6">
-            <div className="relative"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Ou continue com</span></div></div>
-            <div className="mt-4 flex justify-center"><GoogleLogin onSuccess={handleGoogleSuccess} onError={() => setError("Falha no cadastro com Google.")} /></div>
-          </div>
-          <p className="mt-6 text-center text-sm text-gray-600">
-            Já tem uma conta?{" "}
-            <Link href={`/login${redirectParam}`} className="text-teal-600 hover:underline">
-              Faça login
-            </Link>
-          </p>
-        </div>
+        <Suspense fallback={<div className="w-full max-w-md text-center text-white">Carregando...</div>}>
+          <RegisterForm />
+        </Suspense>
       </div>
     </GoogleOAuthProvider>
   );
