@@ -8,6 +8,9 @@ import dashboardRoutes from './routes/dashboardRoutes';
 import chatbotRoutes from './routes/chatbotRoutes';
 import redacaoRoutes from './routes/redacaoRoutes';
 import trilhaRoutes from './routes/trilhaRoutes';
+import turmaaRoutes from './routes/turmaRoutes';
+import sessaoSalaRoutes from './routes/sessaoSalaRoutes'; // <-- 6. Importar rota da sessão de sala
+
 dotenv.config();
 connectDB(); // <-- 2. Chamar a função de conexão
 
@@ -29,7 +32,8 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/chatbot', chatbotRoutes); // <-- 3. Adicionar rota do chatbot
 app.use('/api/redacao', redacaoRoutes);
 app.use('/api/trilha', trilhaRoutes); // <-- 4. Adicionar rota da trilha
-
+app.use('/api/turmas', turmaaRoutes); // <-- 5. Adicionar rota da turma
+app.use('/api/sessoes-sala', sessaoSalaRoutes); // <-- 7. Usar a rota da sessão de sala
 // Rota de Teste de Saúde
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'PortFlow API is running!' });

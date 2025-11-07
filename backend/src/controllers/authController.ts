@@ -77,6 +77,13 @@ const loginSchema = z.object({
   password: z.string().min(1, "A senha é obrigatória."),
 });
 
+const registerSchema = z.object({
+  name: z.string().min(3, "O nome precisa ter no mínimo 3 caracteres."),
+  email: z.string().email("Formato de e-mail inválido."),
+  password: z.string().min(6, "A senha precisa ter no mínimo 6 caracteres."),
+  // A validação de 'role' foi removida daqui
+});
+
 // --- FUNÇÃO DE LOGIN TRADICIONAL ---
 // (Mantive o nome original 'loginUser' para corresponder ao seu 'authRoutes.ts')
 export const loginUser = async (req: Request, res: Response) => {

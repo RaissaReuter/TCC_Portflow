@@ -27,27 +27,21 @@ const UserSchema: Schema<IUser> = new Schema({
   },
   password: { 
     type: String, 
-    // A senha não é obrigatória, permitindo o cadastro com Google
     required: false, 
-    // Não retorna a senha em consultas por padrão
     select: false 
   },
   role: { 
     type: String, 
     enum: ['aluno', 'professor'], 
-    default: 'aluno' 
+
   },
   googleId: { 
     type: String, 
     required: false, 
     unique: true,
-    // 'sparse' otimiza a indexação de campos únicos que podem ser nulos
     sparse: true 
   },
 }, { timestamps: true });
-
-
-// --- MÉTODOS DO SCHEMA (MANTIDOS) ---
 
 // Middleware (hook) para criptografar a senha ANTES de salvar o usuário
 UserSchema.pre<IUser>('save', async function (next) {
@@ -60,8 +54,6 @@ UserSchema.pre<IUser>('save', async function (next) {
     this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
-    // Se ocorrer um erro, passamos para o próximo middleware
-    // O TypeScript pode reclamar do tipo de 'error', então podemos ser explícitos
     if (error instanceof Error) {
       return next(error);
     }
@@ -71,7 +63,6 @@ UserSchema.pre<IUser>('save', async function (next) {
 
 // Método para comparar a senha fornecida com a senha no banco
 UserSchema.methods.comparePassword = function (password: string): Promise<boolean> {
-  // 'this.password' não estará disponível aqui a menos que usemos .select('+password') na consulta
   if (!this.password) {
     return Promise.resolve(false);
   }

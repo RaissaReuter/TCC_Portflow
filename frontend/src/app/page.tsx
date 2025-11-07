@@ -10,7 +10,7 @@ import ListaSecoes from "../components/ListaSecoes";
 import DetalheSecao from "../components/DetalheSecao";
 import TelaAula from "../components/TelaAula";
 import { GoogleOAuthProvider, GoogleLogin, CredentialResponse } from '@react-oauth/google';
-
+import { useSearchParams } from 'next/navigation';
 
 // --- INTERFACES ---
 interface User {
@@ -55,20 +55,29 @@ export default function Home() {
 
   // --- 1. NOVO ESTADO PARA SINALIZAR A VERIFICAÇÃO DA SESSÃO ---
   const [userSessionChecked, setUserSessionChecked] = useState(false);
+  
+  const searchParamms = useSearchParams();
+  const pageParam = searchParamms.get('page');
 
 
   // --- LÓGICA DE SESSÃO PERSISTENTE ---
   useEffect(() => {
+    if (pageParam === 'login') {
+      setCurrentPage('login');
+      setUserSessionChecked(true); // Marcamos a verificação como concluída
+      return; // Paramos a execução aqui para não verificar o token
+    }
+
+    // Se não, continuamos com a lógica normal de verificar o token
     const checkUserSession = () => {
       const token = localStorage.getItem('authToken');
       if (token) {
         setCurrentPage('dashboard');
       }
-      // --- 2. SINALIZA QUE A VERIFICAÇÃO FOI CONCLUÍDA ---
       setUserSessionChecked(true);
     };
     checkUserSession();
-  }, []); // Array de dependências vazio está correto, roda apenas uma vez.
+  }, [pageParam]); // Adicionamos 'pageParam' como dependência; // Array de dependências vazio está correto, roda apenas uma vez.
 
   // --- LÓGICA DE AUTENTICAÇÃO E DADOS ---
   const handleLogin = async (e: React.FormEvent) => {
@@ -147,6 +156,16 @@ export default function Home() {
         setError("Não foi possível fazer o cadastro.");
       }
     }
+  };
+  const handleLogout = () => {
+    // 1. Remove o token do armazenamento local
+    localStorage.removeItem('authToken');
+    // 2. Limpa os dados do dashboard do estado
+    setDashboardData(null);
+    // 3. Redireciona o usuário para a página inicial
+    setCurrentPage('home');
+    // 4. (Opcional) Mostra uma mensagem de sucesso
+    toast.success("Você saiu da sua conta.");
   };
 
   useEffect(() => {
@@ -263,12 +282,12 @@ export default function Home() {
                 >
                   Começar agora
                 </button>
-                <button 
-                  onClick={() => setCurrentPage("dashboard")}
+                <a 
+                  href="/sala-de-aula"
                   className="border-2 border-white text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-white hover:text-teal-600 transition-all duration-200"
                 >
                   Sala de aula
-                </button>
+                </a>
               </div>
               
               <div className="flex items-center space-x-6 pt-6">
@@ -480,155 +499,84 @@ export default function Home() {
   );
 
   const renderRegisterPage = () => (
-    <div className="min-h-screen bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Crie uma conta</h2>
-          <p className="text-gray-600">Junte-se à nossa comunidade</p>
-        </div>
-        
-        <form className="space-y-4" onSubmit={handleRegister}>
-          <div>
-            <input
-              type="text"
-              placeholder="Nome completo"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
-          </div>
-          <div>
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
-          </div>
-          <div>
-            <input
-              type="password"
-              placeholder="Senha"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
+    <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}>
+      <div className="min-h-screen bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Crie uma conta</h2>
+            <p className="text-gray-600">Junte-se à nossa comunidade</p>
           </div>
           
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-          
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-teal-600 text-white py-3 rounded-lg font-semibold hover:bg-teal-700 transition-colors"
-          >
-            {isLoading ? 'Criando...' : 'Criar conta'}
-          </button>
-        </form>
-
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
+          <form className="space-y-4" onSubmit={handleRegister}>
+            <div>
+              <input type="text" placeholder="Nome completo" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Ou continue com</span>
+            <div>
+              <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            </div>
+            <div>
+              <input type="password" placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            </div>
+            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+            <button type="submit" disabled={isLoading} className="w-full bg-teal-600 text-white py-3 rounded-lg font-semibold hover:bg-teal-700 transition-colors">{isLoading ? 'Criando...' : 'Criar conta'}</button>
+          </form>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300"></div></div>
+              <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Ou continue com</span></div>
+            </div>
+            {/* // <-- MODIFICAÇÃO AQUI: Botão do Google adicionado --> */}
+            <div className="mt-4 flex justify-center">
+              <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => setError("Falha no cadastro com Google.")} />
             </div>
           </div>
 
-          <div className="mt-4 flex space-x-4">
-            <button className="flex-1 flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-              <span className="text-xl mr-2">G</span>
-              Google
-            </button>
-            <button className="flex-1 flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-              <span className="text-xl mr-2">f</span>
-              Facebook
-            </button>
-          </div>
+          <p className="mt-6 text-center text-sm text-gray-600">
+            Já tem uma conta?{" "}
+            <button onClick={() => { setError(""); setCurrentPage("login"); }} className="text-teal-600 hover:underline">Faça login</button>
+          </p>
         </div>
-
-        <p className="mt-6 text-center text-sm text-gray-600">
-          Já tem uma conta?{" "}
-          <button 
-            onClick={() => { setError(""); setCurrentPage("login"); }}
-            className="text-teal-600 hover:underline"
-          >
-            Faça login
-          </button>
-        </p>
-
       </div>
-    </div>
+    </GoogleOAuthProvider>
   );
 
   const renderLoginPage = () => (
-    <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID !}>
-    <div className="min-h-screen bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Se conecte</h2>
-          <p className="text-gray-600">Bem-vindo de volta!</p>
-        </div>
-        
-         <form className="space-y-4" onSubmit={handleLogin}>
-          <div>
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
-          </div>
-          <div>
-            <input
-              type="password"
-              placeholder="Senha"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
+    <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}>
+      <div className="min-h-screen bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Se conecte</h2>
+            <p className="text-gray-600">Bem-vindo de volta!</p>
           </div>
           
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-teal-600 text-white py-3 rounded-lg font-semibold hover:bg-teal-700 transition-colors"
-          >
-            {isLoading ? 'Entrando...' : 'Entrar'}
-          </button>
-        </form>
-
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
+          <form className="space-y-4" onSubmit={handleLogin}>
+            <div>
+              <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Ou continue com</span>
+            <div>
+              <input type="password" placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            </div>
+            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+            <button type="submit" disabled={isLoading} className="w-full bg-teal-600 text-white py-3 rounded-lg font-semibold hover:bg-teal-700 transition-colors">{isLoading ? 'Entrando...' : 'Entrar'}</button>
+          </form>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300"></div></div>
+              <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Ou continue com</span></div>
+            </div>
+            <div className="mt-4 flex justify-center">
+              <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => setError("Falha no login com Google.")} />
             </div>
           </div>
 
-          <div className="mt-4 flex space-x-4">
-            <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => setError("Falha no login com Google.")} />
-          </div>
+          <p className="mt-6 text-center text-sm text-gray-600">
+            Não tem uma conta?{" "}
+            <button onClick={() => { setError(""); setCurrentPage("register"); }} className="text-teal-600 hover:underline">Cadastre-se</button>
+          </p>
         </div>
-
-        <p className="mt-6 text-center text-sm text-gray-600">
-          Não tem uma conta?{" "}
-          <button 
-            onClick={() => { setError(""); setCurrentPage("register"); }}
-            className="text-teal-600 hover:underline"
-          >
-            Cadastre-se
-          </button>
-        </p>
       </div>
-    </div>
     </GoogleOAuthProvider>
   );
 
@@ -674,6 +622,12 @@ export default function Home() {
                 <div className="w-10 h-10 bg-gradient-to-br from-teal-400 to-teal-500 rounded-full flex items-center justify-center shadow-lg">
                   <span className="text-lg">🐱</span>
                 </div>
+                <button
+                  onClick={handleLogout}
+                  className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-red-100"
+                >
+                  Sair
+                </button>
               </div>
             </div>
           </header>
@@ -781,8 +735,10 @@ export default function Home() {
       </div>
     );
   }
+  if (!userSessionChecked) {
+    return <div className="min-h-screen flex items-center justify-center bg-gray-50"><span>Carregando PortFlow...</span></div>;
+  }
 
-  // --- RENDERIZADOR PRINCIPAL ---
   switch(currentPage) {
     case "register":
       return renderRegisterPage();
