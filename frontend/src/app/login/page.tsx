@@ -1,7 +1,7 @@
 // ARQUIVO CORRIGIDO: frontend/src/app/login/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import axios from "axios";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -19,7 +19,7 @@ interface AxiosErrorWithResponse {
   };
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -87,6 +87,18 @@ export default function LoginPage() {
           </div>
           <p className="mt-6 text-center text-sm text-gray-600">Não tem uma conta?{" "}<Link href={`/register${searchParams.get('redirect') ? `?redirect=${searchParams.get('redirect')}` : ''}`} className="text-teal-600 hover:underline">Cadastre-se</Link></p>
         </div>
+      </div>
+    </GoogleOAuthProvider>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}>
+      <div className="min-h-screen bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center p-4">
+        <Suspense fallback={<div>Carregando...</div>}>
+          <LoginForm />
+        </Suspense>
       </div>
     </GoogleOAuthProvider>
   );
