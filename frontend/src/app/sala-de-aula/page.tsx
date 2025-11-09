@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+// import Image from 'next/image'; // <-- REMOVIDO, pois não está mais em uso
 import toast from 'react-hot-toast';
+import { api } from '@/services/api';
 
 // --- INTERFACES ---
 interface User { _id: string; name: string; email: string; role?: 'aluno' | 'professor'; }
@@ -44,9 +44,7 @@ export default function SalaDeAulaPage() {
         return;
       }
       try {
-        const response = await axios.get<{ user: User }>('http://localhost:3001/api/auth/me', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await api.get<{ user: User }>('/auth/me');
         setUser(response.data.user);
       } catch (error) {
         console.error("Sessão inválida:", error);
@@ -62,12 +60,8 @@ export default function SalaDeAulaPage() {
   useEffect(() => {
     if (!sessaoAtiva?._id || sessaoAtiva.status === 'FINALIZADA') return;
     const fetchSessaoStatus = async () => {
-      const token = localStorage.getItem('authToken');
       try {
-        const response = await axios.get<SessaoSala>(
-          `http://localhost:3001/api/sessoes-sala/${sessaoAtiva._id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const response = await api.get<SessaoSala>(`/sessoes-sala/${sessaoAtiva._id}`);
         setSessaoAtiva(response.data);
       } catch (error) {
         console.error("Erro ao buscar status da sessão:", error);
@@ -100,13 +94,8 @@ export default function SalaDeAulaPage() {
   }, [sessaoAtiva]);
 
   const handleSetRole = async (role: 'aluno' | 'professor') => {
-    const token = localStorage.getItem('authToken');
     try {
-      const response = await axios.post<User>(
-        'http://localhost:3001/api/users/set-role',
-        { role },
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      const response = await api.post<User>('/users/set-role', { role });
       setUser(response.data);
       toast.success(`Perfil definido como ${role}!`);
     } catch {
@@ -118,11 +107,9 @@ export default function SalaDeAulaPage() {
     e.preventDefault();
     setFormError('');
     setIsCreating(true);
-    const token = localStorage.getItem('authToken');
     try {
-      const response = await axios.post<SessaoSala>('http://localhost:3001/api/sessoes-sala', 
-        { nome: nomeSessao, topico, quantidadeQuestoes, duracaoMinutos },
-        { headers: { 'Authorization': `Bearer ${token}` } }
+      const response = await api.post<SessaoSala>('/sessoes-sala', 
+        { nome: nomeSessao, topico, quantidadeQuestoes, duracaoMinutos }
       );
       setSessaoAtiva(response.data);
       toast.success('Sessão criada com sucesso!');
@@ -143,12 +130,10 @@ export default function SalaDeAulaPage() {
     e.preventDefault();
     setJoinError('');
     setIsJoining(true);
-    const token = localStorage.getItem('authToken');
     try {
-      const response = await axios.post<{ message: string; sessao: SessaoSala }>(
-        'http://localhost:3001/api/sessoes-sala/entrar',
-        { codigo: codigoSessao },
-        { headers: { 'Authorization': `Bearer ${token}` } }
+      const response = await api.post<{ message: string; sessao: SessaoSala }>(
+        '/sessoes-sala/entrar',
+        { codigo: codigoSessao }
       );
       setSessaoAtiva(response.data.sessao);
       toast.success(response.data.message);
@@ -167,13 +152,11 @@ export default function SalaDeAulaPage() {
 
   const handleIniciarSessao = async () => {
     if (!sessaoAtiva) return;
-    const token = localStorage.getItem('authToken');
     toast.loading('Iniciando atividade...');
     try {
-      const response = await axios.post<{ sessao: SessaoSala }>(
-        `http://localhost:3001/api/sessoes-sala/${sessaoAtiva._id}/iniciar`,
-        {},
-        { headers: { 'Authorization': `Bearer ${token}` } }
+      const response = await api.post<{ sessao: SessaoSala }>(
+        `/sessoes-sala/${sessaoAtiva._id}/iniciar`,
+        {}
       );
       toast.dismiss();
       toast.success('Atividade iniciada!');
@@ -192,12 +175,10 @@ export default function SalaDeAulaPage() {
   const handleResponder = async (questaoId: string, resposta: string) => {
     if (feedbackResposta) return;
     setRespostaSelecionada(resposta);
-    const token = localStorage.getItem('authToken');
     try {
-      const res = await axios.post<{ acertou: boolean }>(
-        'http://localhost:3001/api/sessoes-sala/responder',
-        { sessaoId: sessaoAtiva?._id, questaoId, resposta },
-        { headers: { 'Authorization': `Bearer ${token}` } }
+      const res = await api.post<{ acertou: boolean }>(
+        '/sessoes-sala/responder',
+        { sessaoId: sessaoAtiva?._id, questaoId, resposta }
       );
       setFeedbackResposta(res.data.acertou ? 'correta' : 'incorreta');
       setTimeout(() => {
@@ -213,13 +194,11 @@ export default function SalaDeAulaPage() {
 
   const handleFinalizarSessao = async () => {
     if (!sessaoAtiva) return;
-    const token = localStorage.getItem('authToken');
     toast.loading('Finalizando atividade...');
     try {
-      const response = await axios.post<{ sessao: SessaoSala }>(
-        `http://localhost:3001/api/sessoes-sala/${sessaoAtiva._id}/finalizar`,
-        {},
-        { headers: { 'Authorization': `Bearer ${token}` } }
+      const response = await api.post<{ sessao: SessaoSala }>(
+        `/sessoes-sala/${sessaoAtiva._id}/finalizar`,
+        {}
       );
       toast.dismiss();
       toast.success('Atividade finalizada!');
@@ -228,6 +207,12 @@ export default function SalaDeAulaPage() {
       toast.dismiss();
       toast.error("Não foi possível finalizar a atividade.");
     }
+  };
+
+  const handleSairDaSessao = () => {
+    setSessaoAtiva(null);
+    setIndiceQuestaoAtual(0);
+    setTempoRestante('');
   };
 
   if (isLoading) {
@@ -274,8 +259,22 @@ export default function SalaDeAulaPage() {
           <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Atividade Finalizada!</h2>
           <h3 className="text-xl font-semibold mb-4 text-center">Ranking Final</h3>
           <ol className="space-y-3">
-            {ranking.map((p, index) => (<li key={p.alunoId._id} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg"><span className="text-lg font-bold">{index + 1}º - {p.alunoId.name}</span><span className="text-lg font-bold text-teal-600">{p.pontuacao} pts</span></li>))}
+            {ranking
+              .filter(p => p.alunoId && p.alunoId._id)
+              .map((p, index) => (
+                <li key={p.alunoId._id} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
+                  <span className="text-lg font-bold">{index + 1}º - {p.alunoId.name}</span>
+                  <span className="text-lg font-bold text-teal-600">{p.pontuacao} pts</span>
+                </li>
+              ))
+            }
           </ol>
+          <button 
+            onClick={handleSairDaSessao} 
+            className="mt-8 w-full bg-gray-600 text-white py-3 rounded-xl font-semibold hover:bg-gray-700 transition-colors"
+          >
+            Voltar
+          </button>
         </div>
       );
     }
@@ -288,7 +287,18 @@ export default function SalaDeAulaPage() {
           </div>
           <h3 className="text-lg font-semibold mb-4">Progresso dos Alunos:</h3>
           <div className="space-y-3">
-            {sessaoAtiva.participantes.length > 0 ? (sessaoAtiva.participantes.map(p => (<div key={p.alunoId._id} className="flex justify-between items-center bg-gray-50 p-3 rounded-md"><span>{p.alunoId.name}</span><span className="font-semibold">{p.pontuacao} pts</span></div>))) : (<p className="text-gray-500">Nenhum aluno na sala.</p>)}
+            {sessaoAtiva.participantes.length > 0 ? (
+              sessaoAtiva.participantes
+                .filter(p => p.alunoId && p.alunoId._id)
+                .map(p => (
+                  <div key={p.alunoId._id} className="flex justify-between items-center bg-gray-50 p-3 rounded-md">
+                    <span>{p.alunoId.name}</span>
+                    <span className="font-semibold">{p.pontuacao} pts</span>
+                  </div>
+                ))
+            ) : (
+              <p className="text-gray-500">Nenhum aluno na sala.</p>
+            )}
           </div>
           <button onClick={handleFinalizarSessao} className="mt-8 w-full bg-red-500 text-white py-3 rounded-xl font-semibold hover:bg-red-600">Encerrar Atividade para Todos</button>
         </div>
@@ -301,7 +311,14 @@ export default function SalaDeAulaPage() {
         <div className="bg-teal-50 p-4 rounded-lg inline-block mb-6 border-2 border-dashed border-teal-200"><p className="text-4xl font-bold text-teal-600 tracking-widest">{sessaoAtiva.codigo}</p></div>
         <div className="mt-4 text-left max-w-sm mx-auto">
           <h3 className="font-semibold mb-2 text-center">Alunos na sala ({sessaoAtiva.participantes.length}):</h3>
-          {sessaoAtiva.participantes.length > 0 ? (<ul className="list-disc list-inside bg-gray-50 p-3 rounded-md">{sessaoAtiva.participantes.map(p => <li key={p.alunoId._id}>{p.alunoId.name}</li>)}</ul>) : <p className="text-gray-500 text-center">Aguardando alunos...</p>}
+          {sessaoAtiva.participantes.length > 0 ? (
+            <ul className="list-disc list-inside bg-gray-50 p-3 rounded-md">
+              {sessaoAtiva.participantes
+                .filter(p => p.alunoId && p.alunoId._id)
+                .map(p => <li key={p.alunoId._id}>{p.alunoId.name}</li>)
+              }
+            </ul>
+          ) : <p className="text-gray-500 text-center">Aguardando alunos...</p>}
         </div>
         <button onClick={handleIniciarSessao} className="mt-8 bg-teal-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-teal-700 w-full">Iniciar Atividade</button>
       </div>
@@ -332,6 +349,12 @@ export default function SalaDeAulaPage() {
           <ol className="space-y-3 text-left">
             {ranking.map((p, index) => (<li key={p.alunoId._id} className={`flex items-center justify-between p-4 rounded-lg ${p.alunoId._id === user?._id ? 'bg-teal-100 border-2 border-teal-500' : 'bg-gray-50'}`}><span>{index + 1}º - {p.alunoId.name}</span><span className="font-bold">{p.pontuacao} pts</span></li>))}
           </ol>
+          <button 
+            onClick={handleSairDaSessao} 
+            className="mt-8 w-full bg-gray-600 text-white py-3 rounded-xl font-semibold hover:bg-gray-700 transition-colors"
+          >
+            Sair
+          </button>
         </div>
       );
     }
@@ -348,7 +371,7 @@ export default function SalaDeAulaPage() {
           </div>
           <div className="space-y-4">
             <p className="text-lg text-gray-800 whitespace-pre-wrap">{questaoAtual.enunciado}</p>
-            {questaoAtual.imagemUrl && (<div className="relative w-full h-64 my-4"><Image src={questaoAtual.imagemUrl} alt="Contexto da questão" layout="fill" objectFit="contain" className="rounded-lg"/></div>)}
+            {/* {questaoAtual.imagemUrl && (<div className="relative w-full h-64 my-4"><Image src={questaoAtual.imagemUrl} alt="Contexto da questão" layout="fill" objectFit="contain" className="rounded-lg"/></div>)} */}
             <div className="space-y-3 pt-4">
               {Array.isArray(questaoAtual.alternativas) && questaoAtual.alternativas.map(alt => {
                 const isSelected = respostaSelecionada === alt.letra;

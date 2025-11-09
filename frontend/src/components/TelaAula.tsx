@@ -2,17 +2,17 @@
 
 import toast from 'react-hot-toast';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import Quiz from './Quiz';
+import { api } from '@/services/api';
 
-// --- INTERFACES TIPADAS E COMPLETAS ---
+// --- INTERFACES ---
 interface IContentSection {
   title?: string;
   text?: string;
   subtopics?: { [key: string]: IContentSection };
 }
-type StructuredContent = { [key: string]: IContentSection };
+type StructuredContent = { [key: string]: IContentSection } | { erro?: string };
 
 interface IQuizQuestion {
   questionText: string;
@@ -20,7 +20,6 @@ interface IQuizQuestion {
   correctAnswerIndex: number;
   explanation: string;
 }
-
 interface IEnemExample {
   source: string;
   supportText?: string;
@@ -29,7 +28,6 @@ interface IEnemExample {
   correctAnswerIndex: number;
   explanation: string;
 }
-
 interface IEtapa {
   title: string;
   content: StructuredContent;
@@ -37,11 +35,9 @@ interface IEtapa {
   enem_explanation?: string;
   enem_example?: IEnemExample;
 }
-
 interface DetalheEtapaResponse {
   etapa: IEtapa;
 }
-
 interface TelaAulaProps {
   secaoOrder: number;
   etapaOrder: number;
@@ -49,18 +45,17 @@ interface TelaAulaProps {
   onEtapaConcluida: () => void;
 }
 
-// --- SUB-COMPONENTE ROBUSTO PARA RENDERIZAR O CONTEÚDO ESTRUTURADO ---
 const ConteudoEstruturado = ({ data }: { data: StructuredContent }) => {
-  // Verificação de segurança aprimorada
-  if (!data || typeof data !== 'object' || Object.keys(data).length === 0 || data.erro) {
-    // Mensagem mais clara para o usuário e para nós
-    console.error("ConteudoEstruturado recebeu dados inválidos ou vazios:", data);
+  if (!data || typeof data !== 'object' || Object.keys(data).length === 0 || ('erro' in data && data.erro)) {
+    console.error("ConteudoEstruturado recebeu dados inválidos ou de erro:", data);
     return <p className="text-center text-gray-500 italic my-8">O conteúdo teórico desta aula não pôde ser carregado.</p>;
   }
-
+  
   const Markdown = ({ content }: { content: string }) => (
     <ReactMarkdown
       components={{
+        // --- CORREÇÃO APLICADA AQUI ---
+        // Removidos os parênteses extras ')' antes do '=>'
         p: ({...props}) => <p className="text-base sm:text-lg text-gray-700 leading-relaxed text-justify mb-4" {...props} />,
         strong: ({...props}) => <strong className="font-bold text-teal-700" {...props} />,
         ul: ({...props}) => <ul className="list-disc list-inside space-y-2 mb-4 pl-4" {...props} />,
@@ -72,13 +67,10 @@ const ConteudoEstruturado = ({ data }: { data: StructuredContent }) => {
   return (
     <div className="space-y-4 border-t border-b border-gray-200 py-8">
       {Object.keys(data).sort().map((key) => {
-        const section = data[key];
-
-        // Verificação de segurança para cada seção
+        const section = (data as { [key: string]: IContentSection })[key];
         if (typeof section !== 'object' || section === null) {
           return null;
         }
-
         return (
           <div key={key}>
             {section.title && (
@@ -113,9 +105,7 @@ export default function TelaAula({ secaoOrder, etapaOrder, onVoltar, onEtapaConc
       setIsLoading(true);
       setError('');
       try {
-        const token = localStorage.getItem('authToken');
-        const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/trilha/secao/${secaoOrder}/etapa/${etapaOrder}`;
-        const response = await axios.get<DetalheEtapaResponse>(apiUrl, { headers: { Authorization: `Bearer ${token}` } });
+        const response = await api.get<DetalheEtapaResponse>(`/trilha/secao/${secaoOrder}/etapa/${etapaOrder}`);
         setEtapa(response.data.etapa);
       } catch (err) {
         console.error("Erro ao buscar dados da etapa:", err);
@@ -129,9 +119,7 @@ export default function TelaAula({ secaoOrder, etapaOrder, onVoltar, onEtapaConc
 
   const handleCompletarEtapa = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/trilha/completar-etapa`;
-      await axios.post(apiUrl, {}, { headers: { Authorization: `Bearer ${token}` } });
+      await api.post('/trilha/completar-etapa', { secaoOrder, etapaOrder });
       toast.success("Parabéns! Etapa concluída.");
       onEtapaConcluida();
     } catch (err) {
@@ -142,9 +130,8 @@ export default function TelaAula({ secaoOrder, etapaOrder, onVoltar, onEtapaConc
 
   const handleQuizCompletion = () => {
     setQuizCompleted(true);
-    // Se não houver um exemplo do ENEM, a etapa já pode ser concluída aqui.
     if (!etapa?.enem_example?.questionText) {
-      setEnemQuizCompleted(true); // Pula para o estado final
+      setEnemQuizCompleted(true);
       toast.success("Quiz finalizado! Etapa pronta para ser concluída.");
     } else {
       toast.success("Quiz finalizado! Agora, um desafio no estilo ENEM.");

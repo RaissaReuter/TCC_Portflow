@@ -1,3 +1,4 @@
+// frontend/src/components/Quiz.tsx
 "use client"
 
 import { useState } from 'react';

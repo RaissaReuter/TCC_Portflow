@@ -1,37 +1,15 @@
 "use client"
 
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import Image from 'next/image';
+import { api } from '@/services/api';
 
-// --- INTERFACES (Definindo a "forma" dos dados) ---
-interface IEtapa {
-  title: string;
-  order: number;
-}
-
-interface ISecao {
-  _id: string;
-  title: string;
-  description: string;
-  order: number;
-  etapas: IEtapa[];
-}
-
-interface IProgresso {
-  secaoAtual: number;
-}
-
-// Interface para a resposta completa da nossa API
-interface ListaSecoesResponse {
-  secoes: ISecao[];
-  progresso: IProgresso;
-}
-
-interface ListaSecoesProps {
-  onSecaoClick: (secaoOrder: number) => void;
-  refreshTrigger: number; // <-- NOVA PROP
-}
+// --- INTERFACES ---
+interface IEtapa { title: string; order: number; }
+interface ISecao { _id: string; title: string; description: string; order: number; etapas: IEtapa[]; }
+interface IProgresso { secaoAtual: number; }
+interface ListaSecoesResponse { secoes: ISecao[]; progresso: IProgresso; }
+interface ListaSecoesProps { onSecaoClick: (secaoOrder: number) => void; refreshTrigger: number; }
 
 export default function ListaSecoes({ onSecaoClick, refreshTrigger }: ListaSecoesProps) {
   const [secoes, setSecoes] = useState<ISecao[]>([]);
@@ -39,22 +17,20 @@ export default function ListaSecoes({ onSecaoClick, refreshTrigger }: ListaSecoe
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
+  console.log("Componente ListaSecoes foi renderizado.");
+
   useEffect(() => {
+    console.log("useEffect do ListaSecoes foi disparado!"); // <-- Novo log
     const fetchTrilhaData = async () => {
-      // O bloco try começa aqui e deve englobar toda a lógica da requisição
+      setIsLoading(true);
+      setError('');
       try {
-        const token = localStorage.getItem('authToken');
-        const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/trilha`;
+        console.log("Tentando buscar dados da trilha..."); // <-- Novo log
+        const response = await api.get<ListaSecoesResponse>('/trilha');
+        console.log("Dados da trilha recebidos:", response.data); // <-- Novo log
         
-        const response = await axios.get<ListaSecoesResponse>(apiUrl, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        // Estas linhas PRECISAM estar dentro do try, pois dependem da 'response'
         setSecoes(response.data.secoes);
         setProgresso(response.data.progresso);
-
-      // A chave '}' do try fecha aqui, ANTES do catch
       } catch (err) {
         setError('Não foi possível carregar a trilha. Tente novamente.');
         console.error("Erro detalhado ao buscar trilha:", err);
@@ -64,7 +40,7 @@ export default function ListaSecoes({ onSecaoClick, refreshTrigger }: ListaSecoe
     };
 
     fetchTrilhaData();
-  }, [refreshTrigger]); // Dependências vazias para rodar apenas uma vez
+  }, [refreshTrigger]);
 
   if (isLoading) {
     return <div className="text-center p-10">Carregando Trilha...</div>;
@@ -112,7 +88,7 @@ export default function ListaSecoes({ onSecaoClick, refreshTrigger }: ListaSecoe
                       disabled
                       className="bg-gray-400 text-white px-6 py-2 rounded-xl font-semibold cursor-not-allowed"
                     >
-                      Ir para Seção {secao.order}
+                      Bloqueado
                     </button>
                 )}
               </div>
