@@ -14,7 +14,9 @@
     "build": "cd backend && npm install && npm run build",
     "start": "cd backend && npm start",
     "build:frontend-only": "cd frontend && npm install && npm run build",
-    "start:frontend-only": "cd frontend && npm start"
+    "start:frontend-only": "cd frontend && npm start",
+    "build:fullstack": "cd backend && npm install && npm run build && cd ../frontend && npm install && npm run build",
+    "start:fullstack": "cd backend && npm start"
   },
   "workspaces": [
     "backend",

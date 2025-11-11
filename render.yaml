@@ -1,10 +1,10 @@
 services:
   - type: web
-    name: portflow-backend
+    name: portflow-fullstack
     env: node
     plan: free
-    buildCommand: yarn build
-    startCommand: yarn start
+    buildCommand: npm run build:fullstack
+    startCommand: npm run start:fullstack
     envVars:
       - key: NODE_ENV
         value: production
@@ -20,15 +20,3 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
-
-  - type: web
-    name: portflow-frontend
-    env: node
-    plan: free
-    buildCommand: cd frontend && npm install && npm run build
-    startCommand: cd frontend && npm start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: NEXT_PUBLIC_API_URL
-        value: https://tcc-portflow-phg6.onrender.com
