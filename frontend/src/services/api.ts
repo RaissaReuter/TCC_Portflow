@@ -10,16 +10,12 @@ export const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    if (!config.headers) {
-      config.headers = {};
-    }
-
     // 2. Tentamos pegar o token de autenticação do localStorage
     const token = localStorage.getItem('authToken');
 
     // 3. Se o token existir, nós o adicionamos ao cabeçalho 'Authorization'
     if (token) {
-    
+      config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
     }
 
@@ -27,7 +23,6 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    
     return Promise.reject(error);
   }
 );

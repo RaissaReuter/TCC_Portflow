@@ -1,7 +1,7 @@
 "use client";
 
 import toast from 'react-hot-toast';
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import 'react-day-picker/dist/style.css';
 import Chatbot from "../components/Chatbot"; 
 import SimuladorRedacao from "../components/SimuladorRedacao";
@@ -27,7 +27,7 @@ interface DashboardData {
   };
 }
 
-export default function Home() {
+function HomeContent() {
   const [currentPage, setCurrentPage] = useState("home");
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [secaoAtiva, setSecaoAtiva] = useState<number | null>(null);
@@ -377,4 +377,12 @@ export default function Home() {
     default:
       return renderHomePage();
   }
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50">Carregando...</div>}>
+      <HomeContent />
+    </Suspense>
+  );
 }
