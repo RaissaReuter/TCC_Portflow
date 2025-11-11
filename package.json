@@ -3,16 +3,18 @@
   "version": "1.0.0",
   "description": "PortFlow - Plataforma educacional",
   "scripts": {
-    "install:backend": "cd backend && yarn install",
-    "install:frontend": "cd frontend && yarn install", 
-    "build:backend": "cd backend && yarn build",
-    "build:frontend": "cd frontend && yarn build",
-    "start:backend": "cd backend && yarn start",
-    "start:frontend": "cd frontend && yarn start",
-    "dev:backend": "cd backend && yarn dev",
-    "dev:frontend": "cd frontend && yarn dev",
+    "install:backend": "cd backend && npm install",
+    "install:frontend": "cd frontend && npm install", 
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm start",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
     "build": "cd backend && npm install && npm run build",
-    "start": "cd backend && npm start"
+    "start": "cd backend && npm start",
+    "build:frontend-only": "cd frontend && npm install && npm run build",
+    "start:frontend-only": "cd frontend && npm start"
   },
   "workspaces": [
     "backend",
