@@ -3,8 +3,8 @@ services:
     name: portflow-backend
     env: node
     plan: free
-    buildCommand: cd backend && yarn install && yarn build
-    startCommand: cd backend && yarn start
+    buildCommand: yarn build
+    startCommand: yarn start
     envVars:
       - key: NODE_ENV
         value: production

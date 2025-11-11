@@ -11,8 +11,8 @@
     "start:frontend": "cd frontend && yarn start",
     "dev:backend": "cd backend && yarn dev",
     "dev:frontend": "cd frontend && yarn dev",
-    "build": "yarn install:backend && yarn build:backend",
-    "start": "yarn start:backend"
+    "build": "cd backend && yarn install && yarn build",
+    "start": "cd backend && yarn start"
   },
   "workspaces": [
     "backend",
