@@ -11,10 +11,11 @@ const connectDB = async () => {
     if (process.env.MONGO_USER && process.env.MONGO_KEY) {
       const mongoUser = process.env.MONGO_USER;
       const mongoKey = process.env.MONGO_KEY;
-      const mongoHost = process.env.MONGO_HOST || 'cluster0.mongodb.net';
-      const mongoDatabase = process.env.MONGO_DATABASE || 'portflow';
+      const mongoHost = process.env.MONGO_HOST || 'cluster0.pargnln.mongodb.net';
+      const mongoDatabase = process.env.MONGO_DATABASE || '';
+      const appName = process.env.MONGO_APP_NAME || 'Cluster0';
       
-      mongoURI = `mongodb+srv://${mongoUser}:${mongoKey}@${mongoHost}/${mongoDatabase}?retryWrites=true&w=majority`;
+      mongoURI = `mongodb+srv://${mongoUser}:${mongoKey}@${mongoHost}/${mongoDatabase}?retryWrites=true&w=majority&appName=${appName}`;
     }
     
     if (!mongoURI) {
