@@ -7,8 +7,11 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "seed:trilha":"ts-node seed.ts",
     "seed:questoes":"ts-node seedQuestoes.ts",
+    "seed:user":"ts-node seedUser.ts",
+    "seed:all": "npm run seed:user && npm run seed:trilha && npm run seed:questoes",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
+    "postbuild": "npm run seed:user",
     "start": "node dist/server.js"
   },
   "keywords": [],
