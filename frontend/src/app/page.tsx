@@ -47,6 +47,13 @@ function HomeContent() {
         return;
       }
 
+      // Verificar se estamos no cliente antes de acessar localStorage
+      if (typeof window === 'undefined') {
+        setCurrentPage('home');
+        setUserSessionChecked(true);
+        return;
+      }
+
       const token = localStorage.getItem('authToken');
 
       if (!token) {
@@ -62,7 +69,9 @@ function HomeContent() {
         setDashboardData(response.data as DashboardData);
       } catch (err) {
         console.error("Erro ao buscar dados do dashboard:", err);
-        localStorage.removeItem('authToken');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('authToken');
+        }
         router.push('/login?error=session_expired'); 
       } finally {
         setUserSessionChecked(true);
@@ -73,7 +82,9 @@ function HomeContent() {
   }, [searchParams, router]);
 
   const handleLogout = () => {
-    localStorage.removeItem('authToken');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('authToken');
+    }
     setDashboardData(null);
     setCurrentPage('home');
     toast.success("Você saiu da sua conta.");

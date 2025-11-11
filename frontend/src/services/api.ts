@@ -1,22 +1,32 @@
 import axios from 'axios';
 
-// Pega a URL base da API a partir das variáveis de ambiente que criamos no .env.local
-const baseURL = process.env.NEXT_PUBLIC_API_URL;
+// Configuração da URL base da API
+const getBaseURL = () => {
+  // Em produção, usa a mesma URL (fullstack)
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  
+  // Para SSR, usa a variável de ambiente ou fallback
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+};
 
 // A partir de agora, usaremos 'api' para todas as chamadas ao backend
 export const api = axios.create({
-  baseURL: baseURL,
+  baseURL: getBaseURL(),
 });
 
 api.interceptors.request.use(
   (config) => {
-    // 2. Tentamos pegar o token de autenticação do localStorage
-    const token = localStorage.getItem('authToken');
+    // 2. Tentamos pegar o token de autenticação do localStorage (apenas no cliente)
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('authToken');
 
-    // 3. Se o token existir, nós o adicionamos ao cabeçalho 'Authorization'
-    if (token) {
-      config.headers = config.headers || {};
-      config.headers.Authorization = `Bearer ${token}`;
+      // 3. Se o token existir, nós o adicionamos ao cabeçalho 'Authorization'
+      if (token) {
+        config.headers = config.headers || {};
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
 
     // 4. Retornamos a configuração modificada para que a requisição continue
