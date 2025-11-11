@@ -65,10 +65,28 @@ function HomeContent() {
       setCurrentPage('dashboard');
       try {
         // --- A ÚNICA CORREÇÃO NECESSÁRIA ---
-        const response = await api.get('/dashboard');
-        setDashboardData(response.data as DashboardData);
+        console.log('🔍 Fazendo requisição para /api/dashboard...');
+        const response = await api.get('/api/dashboard');
+        console.log('📊 Dados recebidos do dashboard:', response.data);
+        
+        // Verificar se os dados têm a estrutura esperada
+        if (response.data && response.data.progress) {
+          setDashboardData(response.data as DashboardData);
+        } else {
+          console.warn('⚠️ Dados do dashboard não têm a estrutura esperada:', response.data);
+          // Criar dados padrão se necessário
+          const defaultData: DashboardData = {
+            userName: response.data?.userName || 'Usuário',
+            progress: {
+              grammarLesson: { hasStarted: false, progressPercentage: 0, title: 'Gramática' },
+              writingLesson: { hasStarted: false, progressPercentage: 0, title: 'Redação' },
+              figuresOfSpeechLesson: { hasStarted: false, progressPercentage: 0, title: 'Figuras de Linguagem' }
+            }
+          };
+          setDashboardData(defaultData);
+        }
       } catch (err) {
-        console.error("Erro ao buscar dados do dashboard:", err);
+        console.error("❌ Erro ao buscar dados do dashboard:", err);
         if (typeof window !== 'undefined') {
           localStorage.removeItem('authToken');
         }
@@ -300,7 +318,7 @@ function HomeContent() {
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-gray-800 mb-6">Vamos continuar?</h2>
               <div className="grid md:grid-cols-2 gap-6">
-                {dashboardData.progress.grammarLesson.hasStarted && (
+                {dashboardData.progress?.grammarLesson?.hasStarted && (
                   <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1"><h3 className="font-bold text-gray-800 mb-2">{dashboardData.progress.grammarLesson.title}</h3><p className="text-sm text-gray-600">Aprenda os fundamentos da gramática portuguesa</p></div>
@@ -310,7 +328,7 @@ function HomeContent() {
                     <button onClick={() => setCurrentPage('trilha')} className="bg-teal-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-teal-700 transition-colors w-full">Continuar</button>
                   </div>
                 )}
-                {dashboardData.progress.writingLesson.hasStarted && (
+                {dashboardData.progress?.writingLesson?.hasStarted && (
                   <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1"><h3 className="font-bold text-gray-800 mb-2">{dashboardData.progress.writingLesson.title}</h3><p className="text-sm text-gray-600">Desenvolva suas habilidades de escrita</p></div>
