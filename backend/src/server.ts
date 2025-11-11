@@ -44,25 +44,24 @@ app.get('/api/health', (req, res) => {
 // --- SERVIR ARQUIVOS ESTÁTICOS DO FRONTEND ---
 if (process.env.NODE_ENV === 'production') {
   // Servir arquivos estáticos do Next.js
-  const frontendPath = path.join(__dirname, '../../frontend/.next/static');
-  const frontendPublicPath = path.join(__dirname, '../../frontend/public');
+  const frontendOutPath = path.join(__dirname, '../../frontend/out');
   
-  app.use('/_next/static', express.static(frontendPath));
-  app.use('/static', express.static(frontendPublicPath));
+  // Servir arquivos estáticos do frontend
+  app.use(express.static(frontendOutPath));
   
-  // Servir o index.html para todas as rotas não-API
-  app.get('*', (req, res) => {
-    // Se a rota começar com /api, retorna 404
+  // Middleware para servir o index.html para rotas não-API
+  app.use((req, res, next) => {
+    // Se a rota começar com /api, continua para próximo middleware
     if (req.path.startsWith('/api')) {
-      return res.status(404).json({ error: 'API endpoint not found' });
+      return next();
     }
     
-    // Para todas as outras rotas, serve o frontend
-    const indexPath = path.join(__dirname, '../../frontend/out/index.html');
+    // Para todas as outras rotas, serve o index.html
+    const indexPath = path.join(frontendOutPath, 'index.html');
     res.sendFile(indexPath, (err) => {
       if (err) {
         console.error('Erro ao servir frontend:', err);
-        res.status(500).json({ error: 'Frontend not available' });
+        res.status(404).json({ error: 'Page not found' });
       }
     });
   });
