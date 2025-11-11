@@ -21,12 +21,18 @@ api.interceptors.request.use(
     // 2. Tentamos pegar o token de autenticação do localStorage (apenas no cliente)
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('authToken');
+      console.log('🔑 Token encontrado no localStorage:', token ? 'SIM' : 'NÃO');
 
       // 3. Se o token existir, nós o adicionamos ao cabeçalho 'Authorization'
       if (token) {
         config.headers = config.headers || {};
         config.headers.Authorization = `Bearer ${token}`;
+        console.log('📤 Token adicionado ao header Authorization');
+      } else {
+        console.log('⚠️ Nenhum token encontrado no localStorage');
       }
+    } else {
+      console.log('🖥️ Executando no servidor (SSR) - sem acesso ao localStorage');
     }
 
     // 4. Retornamos a configuração modificada para que a requisição continue

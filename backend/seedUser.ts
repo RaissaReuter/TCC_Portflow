@@ -42,7 +42,7 @@ const createUser = async () => {
       name: 'Raissa Reuter',
       email: 'raissa@exemplo.com',
       password: 'raissa_2025', // Será hasheada automaticamente
-      role: 'student'
+      role: 'aluno' as const
     };
 
     // Verificar se o usuário já existe

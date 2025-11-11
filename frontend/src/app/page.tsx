@@ -64,6 +64,11 @@ function HomeContent() {
 
       setCurrentPage('dashboard');
       try {
+        // Primeiro, testar se a API está funcionando
+        console.log('🔍 Testando conexão com /api/health...');
+        const healthResponse = await api.get('/api/health');
+        console.log('✅ API Health check:', healthResponse.data);
+        
         // --- A ÚNICA CORREÇÃO NECESSÁRIA ---
         console.log('🔍 Fazendo requisição para /api/dashboard...');
         const response = await api.get('/api/dashboard');
