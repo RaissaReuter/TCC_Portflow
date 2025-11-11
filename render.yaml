@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: portflow-backend
+    env: node
+    plan: free
+    buildCommand: cd backend && yarn install && yarn build
+    startCommand: cd backend && yarn start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_USER
+        sync: false
+      - key: MONGO_KEY
+        sync: false
+      - key: MONGO_HOST
+        sync: false
+      - key: MONGO_DATABASE
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false

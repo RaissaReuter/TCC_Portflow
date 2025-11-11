@@ -1,6 +1,5 @@
 # Geral
 node_modules
-dist
 .env
 .env.local
 .DS_Store
@@ -9,8 +8,9 @@ dist
 # Frontend específico (Next.js)
 frontend/.next
 frontend/out
+frontend/dist
 
-# Backend específico
+# Backend específico - manter dist para deploy
 backend/build
 
 package-lock.json
