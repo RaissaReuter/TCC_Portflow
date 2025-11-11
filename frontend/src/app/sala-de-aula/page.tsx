@@ -3,16 +3,21 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-// import Image from 'next/image'; // <-- REMOVIDO, pois não está mais em uso
 import toast from 'react-hot-toast';
 import { api } from '@/services/api';
+import Avatar from '@/components/Avatar';
 
 // --- INTERFACES ---
 interface User { _id: string; name: string; email: string; role?: 'aluno' | 'professor'; }
 interface Alternativa { letra: string; texto: string; }
 interface Questao { _id: string; enunciado: string; alternativas: Alternativa[]; imagemUrl?: string; }
 interface Resposta { questaoId: string; acertou: boolean; }
-interface Participante { alunoId: { _id: string; name: string; }; pontuacao: number; respostas: Resposta[]; }
+interface Participante { 
+  alunoId: { _id: string; name: string; }; 
+  pontuacao: number; 
+  respostas: Resposta[];
+  questaoAtual: number;
+}
 interface SessaoSala { _id: string; nome: string; codigo: string; status: 'AGUARDANDO' | 'EM_ANDAMENTO' | 'FINALIZADA'; participantes: Participante[]; configuracao: { duracaoMinutos: number; }; tempoInicio?: string; questoes: Questao[]; }
 interface ApiErrorData { message: string; }
 interface AxiosErrorWithData { response?: { data?: ApiErrorData; }; }
@@ -34,8 +39,9 @@ export default function SalaDeAulaPage() {
   const [tempoRestante, setTempoRestante] = useState('');
   const [indiceQuestaoAtual, setIndiceQuestaoAtual] = useState(0);
   const [respostaSelecionada, setRespostaSelecionada] = useState<string | null>(null);
-  const [feedbackResposta, setFeedbackResposta] = useState<'correta' | 'incorreta' | null>(null);
+  const [feedbackOverlay, setFeedbackOverlay] = useState<'correta' | 'incorreta' | null>(null);
 
+  // ... (toda a lógica permanece a mesma até a renderAlunoView)
   useEffect(() => {
     const checkAuthAndFetchData = async () => {
       const token = localStorage.getItem('authToken');
@@ -173,19 +179,19 @@ export default function SalaDeAulaPage() {
   };
 
   const handleResponder = async (questaoId: string, resposta: string) => {
-    if (feedbackResposta) return;
+    if (feedbackOverlay) return; 
     setRespostaSelecionada(resposta);
     try {
       const res = await api.post<{ acertou: boolean }>(
         '/sessoes-sala/responder',
         { sessaoId: sessaoAtiva?._id, questaoId, resposta }
       );
-      setFeedbackResposta(res.data.acertou ? 'correta' : 'incorreta');
+      setFeedbackOverlay(res.data.acertou ? 'correta' : 'incorreta');
       setTimeout(() => {
+        setFeedbackOverlay(null);
         setIndiceQuestaoAtual(prev => prev + 1);
-        setFeedbackResposta(null);
         setRespostaSelecionada(null);
-      }, 1500);
+      }, 1200);
     } catch {
       toast.error("Erro ao enviar resposta.");
       setRespostaSelecionada(null);
@@ -218,11 +224,11 @@ export default function SalaDeAulaPage() {
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Verificando permissões...</div>;
   }
-
+  
   const renderRoleSelection = () => (
     <div className="bg-white p-8 rounded-2xl shadow-lg text-center">
       <h2 className="text-2xl font-bold text-gray-800 mb-2">Bem-vindo(a) à Sala de Aula!</h2>
-      <p className="text-gray-600 mb-8">Para continuar, por favor, escolha seu perfil. Esta ação não poderá ser desfeita.</p>
+      <p className="text-gray-600 mb-8">Para continuar, por favor, escolha seu perfil.</p>
       <div className="flex flex-col sm:flex-row gap-4">
         <button onClick={() => handleSetRole('aluno')} className="flex-1 bg-teal-600 text-white py-4 rounded-xl font-semibold hover:bg-teal-700 transition-transform hover:scale-105">
           Sou Aluno
@@ -257,13 +263,15 @@ export default function SalaDeAulaPage() {
       return (
         <div className="bg-white p-8 rounded-2xl shadow-lg">
           <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Atividade Finalizada!</h2>
-          <h3 className="text-xl font-semibold mb-4 text-center">Ranking Final</h3>
+          <h3 className="text-xl font-semibold mb-4 text-center">🏆 Ranking Final 🏆</h3>
           <ol className="space-y-3">
             {ranking
-              .filter(p => p.alunoId && p.alunoId._id)
+              .filter(p => p.alunoId && p.alunoId.name)
               .map((p, index) => (
-                <li key={p.alunoId._id} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
-                  <span className="text-lg font-bold">{index + 1}º - {p.alunoId.name}</span>
+                <li key={p.alunoId._id} className="flex items-center gap-4 bg-gray-50 p-4 rounded-lg">
+                  <span className="text-lg font-bold text-gray-500 w-8 text-center">{index + 1}º</span>
+                  <Avatar name={p.alunoId.name} />
+                  <span className="text-lg font-semibold grow">{p.alunoId.name}</span>
                   <span className="text-lg font-bold text-teal-600">{p.pontuacao} pts</span>
                 </li>
               ))
@@ -279,6 +287,7 @@ export default function SalaDeAulaPage() {
       );
     }
     if (sessaoAtiva.status === 'EM_ANDAMENTO') {
+      const totalQuestoes = sessaoAtiva.questoes.length;
       return (
         <div className="bg-white p-8 rounded-2xl shadow-lg">
           <div className="flex justify-between items-center mb-6">
@@ -290,12 +299,24 @@ export default function SalaDeAulaPage() {
             {sessaoAtiva.participantes.length > 0 ? (
               sessaoAtiva.participantes
                 .filter(p => p.alunoId && p.alunoId._id)
-                .map(p => (
-                  <div key={p.alunoId._id} className="flex justify-between items-center bg-gray-50 p-3 rounded-md">
-                    <span>{p.alunoId.name}</span>
-                    <span className="font-semibold">{p.pontuacao} pts</span>
-                  </div>
-                ))
+                .map(p => {
+                  const progressoQuestao = p.questaoAtual >= totalQuestoes 
+                    ? "Finalizou!" 
+                    : `Questão ${p.questaoAtual + 1}/${totalQuestoes}`;
+
+                  return (
+                    <div key={p.alunoId._id} className="flex justify-between items-center bg-gray-50 p-3 rounded-md">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={p.alunoId.name} />
+                        <span className="font-semibold">{p.alunoId.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-bold text-teal-600 block">{p.pontuacao} pts</span>
+                        <span className="text-sm text-gray-500">{progressoQuestao}</span>
+                      </div>
+                    </div>
+                  )
+                })
             ) : (
               <p className="text-gray-500">Nenhum aluno na sala.</p>
             )}
@@ -342,12 +363,24 @@ export default function SalaDeAulaPage() {
       const ranking = [...sessaoAtiva.participantes].sort((a, b) => b.pontuacao - a.pontuacao);
       const minhaPosicao = ranking.findIndex(p => p.alunoId._id === user?._id) + 1;
       return (
-        <div className="bg-white p-8 rounded-2xl shadow-lg text-center">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Atividade Finalizada!</h2>
-          <p className="text-lg mb-4">Sua posição: <span className="font-bold text-teal-600">{minhaPosicao > 0 ? `${minhaPosicao}º lugar` : 'N/A'}</span></p>
-          <h3 className="text-xl font-semibold mb-4">Ranking Final</h3>
-          <ol className="space-y-3 text-left">
-            {ranking.map((p, index) => (<li key={p.alunoId._id} className={`flex items-center justify-between p-4 rounded-lg ${p.alunoId._id === user?._id ? 'bg-teal-100 border-2 border-teal-500' : 'bg-gray-50'}`}><span>{index + 1}º - {p.alunoId.name}</span><span className="font-bold">{p.pontuacao} pts</span></li>))}
+        <div className="bg-white p-8 rounded-2xl shadow-lg">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Atividade Finalizada!</h2>
+          <div className="text-center mb-6">
+            <p className="text-lg text-gray-600">Sua posição final:</p>
+            <p className="text-4xl font-bold text-teal-600">{minhaPosicao > 0 ? `${minhaPosicao}º lugar` : 'N/A'}</p>
+          </div>
+          <h3 className="text-xl font-semibold mb-4 text-center">🏆 Ranking Final 🏆</h3>
+          <ol className="space-y-3">
+            {ranking
+              .filter(p => p.alunoId && p.alunoId.name)
+              .map((p, index) => (
+              <li key={p.alunoId._id} className={`flex items-center gap-4 p-4 rounded-lg ${p.alunoId._id === user?._id ? 'bg-teal-100 border-2 border-teal-500' : 'bg-gray-50'}`}>
+                <span className="text-lg font-bold text-gray-500 w-8 text-center">{index + 1}º</span>
+                <Avatar name={p.alunoId.name} />
+                <span className="text-lg font-semibold grow">{p.alunoId.name}</span>
+                <span className="font-bold">{p.pontuacao} pts</span>
+              </li>
+            ))}
           </ol>
           <button 
             onClick={handleSairDaSessao} 
@@ -371,47 +404,74 @@ export default function SalaDeAulaPage() {
           </div>
           <div className="space-y-4">
             <p className="text-lg text-gray-800 whitespace-pre-wrap">{questaoAtual.enunciado}</p>
-            {/* {questaoAtual.imagemUrl && (<div className="relative w-full h-64 my-4"><Image src={questaoAtual.imagemUrl} alt="Contexto da questão" layout="fill" objectFit="contain" className="rounded-lg"/></div>)} */}
             <div className="space-y-3 pt-4">
-              {Array.isArray(questaoAtual.alternativas) && questaoAtual.alternativas.map(alt => {
-                const isSelected = respostaSelecionada === alt.letra;
-                let buttonClass = 'border-gray-200 hover:bg-teal-100 hover:border-teal-500';
-                if (isSelected && feedbackResposta === 'correta') buttonClass = 'bg-green-200 border-green-500';
-                if (isSelected && feedbackResposta === 'incorreta') buttonClass = 'bg-red-200 border-red-500';
-                return (
-                  <button key={alt.letra} onClick={() => handleResponder(questaoAtual._id, alt.letra)} disabled={!!feedbackResposta} className={`w-full text-left p-4 bg-gray-50 rounded-lg border-2 transition-all ${buttonClass}`}>
-                    <span className="font-bold mr-2">{alt.letra})</span>
-                    {alt.texto}
-                  </button>
-                );
-              })}
+              {Array.isArray(questaoAtual.alternativas) && questaoAtual.alternativas.map(alt => (
+                <button 
+                  key={alt.letra} 
+                  onClick={() => handleResponder(questaoAtual._id, alt.letra)} 
+                  disabled={!!feedbackOverlay || !!respostaSelecionada}
+                  className={`w-full text-left p-4 rounded-lg border-2 transition-all duration-200 
+                    ${respostaSelecionada === alt.letra ? 'bg-yellow-200 border-yellow-500' : 'bg-gray-50 border-gray-200 hover:bg-teal-50 hover:border-teal-300'}
+                    disabled:opacity-70 disabled:cursor-not-allowed
+                  `}
+                >
+                  <span className="font-bold mr-2">{alt.letra})</span>
+                  {alt.texto}
+                </button>
+              ))}
             </div>
           </div>
         </div>
       );
     }
+    // --- CORREÇÃO NA TELA DE ESPERA DO ALUNO ---
     return (
       <div className="bg-white p-8 rounded-2xl shadow-lg text-center">
         <h2 className="text-2xl font-bold text-gray-800 mb-2">Você entrou na sessão!</h2>
-        <p className="text-gray-600 mb-6">Nome da Atividade: <span className="font-bold">{sessaoAtiva.nome}</span></p>
+        <p className="text-gray-600 mb-4">Nome da Atividade: <span className="font-bold">{sessaoAtiva.nome}</span></p>
+        
+        {/* CÓDIGO DA SALA ADICIONADO AQUI */}
+        <div className="mb-6">
+          <p className="text-sm text-gray-500">Código da Sala:</p>
+          <p className="text-2xl font-bold text-teal-600 tracking-widest">{sessaoAtiva.codigo}</p>
+        </div>
+
         <div className="animate-pulse text-teal-600"><p className="text-lg">Aguardando o professor iniciar a atividade...</p></div>
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold">Sala de Aula</h1>
-            <Link href="/" className="text-teal-600 font-semibold hover:underline">
-              &larr; Voltar para o Dashboard
-            </Link>
+    <div className="relative min-h-screen">
+      {feedbackOverlay && (
+        <div 
+          className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-300
+            ${feedbackOverlay === 'correta' ? 'bg-green-500/30' : 'bg-red-500/30'}
+          `}
+        >
+          <div className="transform transition-all duration-300 scale-125 animate-pulse">
+            {feedbackOverlay === 'correta' ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+            )}
+          </div>
         </div>
-        
-        {user && !user.role && renderRoleSelection()}
-        {user && user.role === 'professor' && renderProfessorView()}
-        {user && user.role === 'aluno' && renderAlunoView()}
+      )}
+
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex justify-between items-center mb-8">
+              <h1 className="text-3xl font-bold">Sala de Aula</h1>
+              <Link href="/" className="text-teal-600 font-semibold hover:underline">
+                &larr; Voltar para o Dashboard
+              </Link>
+          </div>
+          
+          {user && !user.role && renderRoleSelection()}
+          {user && user.role === 'professor' && renderProfessorView()}
+          {user && user.role === 'aluno' && renderAlunoView()}
+        </div>
       </div>
     </div>
   );

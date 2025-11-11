@@ -2,7 +2,6 @@
 
 import toast from 'react-hot-toast';
 import { useState, useEffect } from "react";
-import axios from "axios";
 import 'react-day-picker/dist/style.css';
 import Chatbot from "../components/Chatbot"; 
 import SimuladorRedacao from "../components/SimuladorRedacao";
@@ -10,6 +9,7 @@ import ListaSecoes from "../components/ListaSecoes";
 import DetalheSecao from "../components/DetalheSecao";
 import TelaAula from "../components/TelaAula";
 import { useSearchParams, useRouter } from 'next/navigation';
+import { api } from '@/services/api'; // Importando nosso serviço
 
 // --- INTERFACES ---
 interface ProgressItem {
@@ -38,7 +38,6 @@ export default function Home() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // --- LÓGICA UNIFICADA DE SESSÃO E DADOS ---
   useEffect(() => {
     const inicializarPagina = async () => {
       const pageParam = searchParams.get('page');
@@ -58,9 +57,8 @@ export default function Home() {
 
       setCurrentPage('dashboard');
       try {
-        const response = await axios.get('http://localhost:3001/api/dashboard', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        // --- A ÚNICA CORREÇÃO NECESSÁRIA ---
+        const response = await api.get('/dashboard');
         setDashboardData(response.data as DashboardData);
       } catch (err) {
         console.error("Erro ao buscar dados do dashboard:", err);
@@ -278,7 +276,7 @@ export default function Home() {
                   <h1 className="text-4xl font-bold">Olá, {dashboardData.userName}!</h1>
                   <p className="text-teal-100 text-lg">O que vamos fazer hoje?</p>
                    <div className="flex space-x-4">
-                    <button className="bg-white text-teal-600 px-6 py-3 rounded-xl font-bold hover:bg-gray-50 hover:scale-105 transition-all duration-200 shadow-lg">Continuar</button>
+                    <button onClick={() => setCurrentPage('trilha')} className="bg-white text-teal-600 px-6 py-3 rounded-xl font-bold hover:bg-gray-50 hover:scale-105 transition-all duration-200 shadow-lg">Continuar</button>
                     <button className="border-2 border-white text-white px-6 py-3 rounded-xl font-bold hover:bg-white hover:text-teal-600 transition-all duration-200">Explorar</button>
                   </div>
                 </div>
@@ -298,7 +296,7 @@ export default function Home() {
                       <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center ml-4"><span className="text-xl">✓</span></div>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2 mb-4"><div className="bg-teal-500 h-2 rounded-full" style={{width: `${dashboardData.progress.grammarLesson.progressPercentage}%`}}></div></div>
-                    <button className="bg-teal-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-teal-700 transition-colors w-full">Continuar</button>
+                    <button onClick={() => setCurrentPage('trilha')} className="bg-teal-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-teal-700 transition-colors w-full">Continuar</button>
                   </div>
                 )}
                 {dashboardData.progress.writingLesson.hasStarted && (
@@ -308,7 +306,7 @@ export default function Home() {
                       <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center ml-4"><span className="text-xl">📝</span></div>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2 mb-4"><div className="bg-blue-500 h-2 rounded-full" style={{width: `${dashboardData.progress.writingLesson.progressPercentage}%`}}></div></div>
-                    <button className="bg-blue-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-blue-700 transition-colors w-full">Continuar</button>
+                    <button onClick={() => setCurrentPage('trilha')} className="bg-blue-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-blue-700 transition-colors w-full">Continuar</button>
                   </div>
                 )}
               </div>

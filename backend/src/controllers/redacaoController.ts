@@ -1,18 +1,22 @@
-// /src/controllers/redacaoController.ts
-import { Response } from 'express';
-import { AuthRequest } from '../middlewares/authMiddleware';
+import { Request, Response } from 'express';
 import OpenAI from 'openai';
 import { z, ZodError } from 'zod';
+
+// --- 1. CORREÇÃO: Removendo a importação que falha ---
+// import { AuthRequest } from '../middlewares/authMiddleware';
+
+// --- 2. CORREÇÃO: Definindo o tipo localmente ---
+// Isso garante que o controller não dependa de um tipo não exportado.
+type AuthRequest = Request & { user?: { id?: string; name?: string } };
 
 // Configuração do cliente da OpenAI
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Schema de validação com limites ajustados
 const redacaoSchema = z.object({
   tema: z.string().min(1, "O tema não pode estar vazio.").max(300, "O tema é muito longo."),
-  texto: z.string().min(50, "A redação precisa ter no mínimo 50 caracteres."),
+  texto: z.string().min(150, "A redação precisa ter no mínimo 150 caracteres.").max(7000, "A redação excedeu o limite de 7000 caracteres."),
 });
 
 export const analisarRedacao = async (req: AuthRequest, res: Response) => {
@@ -24,37 +28,43 @@ export const analisarRedacao = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ message: "Usuário não autenticado." });
     }
 
-    // O prompt de sistema que instrui a IA a retornar um JSON
     const systemPrompt = `Você é um corretor especialista do ENEM para a plataforma PortFlow. Sua tarefa é analisar a redação de um aluno e retornar um feedback ESTRITAMENTE no formato JSON.
 
     O JSON de saída deve ter a seguinte estrutura:
     {
+      "notas": {
+        "c1": "Nota de 0 a 200 para a Competência 1 (Domínio da norma culta).",
+        "c2": "Nota de 0 a 200 para a Competência 2 (Compreensão do tema e estrutura).",
+        "c3": "Nota de 0 a 200 para a Competência 3 (Seleção e organização de informações).",
+        "c4": "Nota de 0 a 200 para a Competência 4 (Coesão textual).",
+        "c5": "Nota de 0 a 200 para a Competência 5 (Proposta de intervenção).",
+        "notaFinal": "A SOMA das 5 competências, resultando em um valor de 0 a 1000."
+      },
       "analiseGeral": "Um parágrafo curto com suas impressões gerais sobre o texto.",
       "pontosFortes": [
-        { "competencia": "C1", "descricao": "Descreva um ponto positivo aqui, relacionado à Competência 1." },
-        { "competencia": "C2", "descricao": "Descreva um ponto positivo aqui, relacionado à Competência 2." }
+        { "competencia": "C1", "descricao": "Descreva um ponto positivo aqui, relacionado à Competência 1." }
       ],
       "pontosAMelhorar": [
-        { "competencia": "C3", "descricao": "Aponte uma área para melhoria com sugestões, relacionado à Competência 3." },
-        { "competencia": "C4", "descricao": "Aponte outra área para melhoria com sugestões, relacionado à Competência 4." }
+        { "competencia": "C3", "descricao": "Aponte uma área para melhoria com sugestões, relacionado à Competência 3." }
       ],
       "sugestaoFinal": "Finalize com uma frase de encorajamento para o estudante ${user.name}.",
       "errosSugeridos": [
         { "palavra": "palavra_errada_no_texto", "sugestao": "sugestão_de_correção" }
       ]
     }
-    Identifique até 3 erros ortográficos ou gramaticais e preencha 'errosSugeridos'. Se não houver erros, retorne um array vazio []. NÃO adicione nenhum texto antes ou depois do objeto JSON.`;
+    Seja rigoroso na avaliação, seguindo os critérios do ENEM. A notaFinal DEVE ser a soma exata das notas das competências. NÃO adicione nenhum texto antes ou depois do objeto JSON.`;
 
     const userPrompt = `Tema: "${tema}"\n\nRedação: "${texto}"`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo-0125", // Modelo otimizado para seguir formatos
+      model: "gpt-4o",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
       ],
-      response_format: { type: "json_object" }, // Força a saída em JSON
+      response_format: { type: "json_object" },
       temperature: 0.5,
+      max_tokens: 2048, 
     });
 
     const assistantResponse = completion.choices[0].message.content;
@@ -63,10 +73,8 @@ export const analisarRedacao = async (req: AuthRequest, res: Response) => {
       throw new Error("A IA não retornou um conteúdo válido.");
     }
 
-    // Transforma a string JSON em um objeto JavaScript
     const feedbackJson = JSON.parse(assistantResponse);
 
-    // CORREÇÃO: Envia o objeto parseado com a chave 'feedback'
     res.status(200).json({ feedback: feedbackJson });
 
   } catch (error) {

@@ -1,5 +1,3 @@
-// ARQUIVO NOVO: backend/src/models/SessaoSala.ts
-
 import mongoose, { Document, Schema } from 'mongoose';
 import { IUser } from './user';
 import { IQuestao } from './Questao';
@@ -15,6 +13,7 @@ export interface IProgressoAlunoNaSessao {
     acertou: boolean;
   }[];
   pontuacao: number;
+  questaoAtual: number; // <-- 1. NOVO CAMPO ADICIONADO À INTERFACE
 }
 
 export interface ISessao extends Document {
@@ -40,6 +39,9 @@ const ProgressoAlunoSchema: Schema = new Schema({
     _id: false
   }],
   pontuacao: { type: Number, default: 0 },
+  // --- 2. NOVO CAMPO ADICIONADO AO SCHEMA ---
+  // Representa o índice da questão que o aluno está visualizando.
+  questaoAtual: { type: Number, default: 0 }, 
 }, { _id: false });
 
 const SessaoSchema: Schema = new Schema({

@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { IUser } from '../models/user';
 import QuestaoModel from '../models/Questao';
-import SessaoSalaModel, { IProgressoAlunoNaSessao } from '../models/SessaoSala';
+import SessaoSalaModel from '../models/SessaoSala';
 import { gerarQuestoesComIA } from '../services/openaiService';
 
 // Função para gerar um código de 6 caracteres alfanuméricos
@@ -78,7 +78,6 @@ export const entrarNaSessao = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Sessão não encontrada ou já iniciada.' });
     }
 
-    // CORREÇÃO: Comparar IDs como strings
     const alunoJaParticipa = sessao.participantes.some(
       p => String(p.alunoId) === String(aluno._id)
     );
@@ -87,10 +86,12 @@ export const entrarNaSessao = async (req: Request, res: Response) => {
       return res.status(200).json({ message: 'Você já está nesta sessão.', sessao });
     }
 
+    // Adicionamos o aluno com questaoAtual: 0 por padrão (definido no Schema)
     sessao.participantes.push({
       alunoId: aluno._id,
       respostas: [],
       pontuacao: 0,
+      questaoAtual: 0, // Podemos ser explícitos, mas o default no schema já faz isso
     });
 
     await sessao.save();
@@ -104,8 +105,6 @@ export const entrarNaSessao = async (req: Request, res: Response) => {
 };
 
 // --- FUNÇÃO PARA BUSCAR O STATUS DA SESSÃO ---
-// Em backend/src/controllers/sessaoSalaController.ts
-
 export const getStatusSessao = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -116,13 +115,12 @@ export const getStatusSessao = async (req: Request, res: Response) => {
         path: 'participantes.alunoId',
         select: 'name email'
       })
-      .populate('questoes'); // Garanta que esta linha existe
+      .populate('questoes');
 
     if (!sessao) {
       return res.status(404).json({ message: 'Sessão não encontrada.' });
     }
 
-    // Comparando IDs como strings para evitar erros de tipo
     const isProfessor = String(sessao.professor) === String(user._id);
     const isParticipante = sessao.participantes.some(p => String((p.alunoId as any)._id) === String(user._id));
 
@@ -138,9 +136,10 @@ export const getStatusSessao = async (req: Request, res: Response) => {
   }
 };
 
+// --- FUNÇÃO PARA INICIAR SESSÃO ---
 export const iniciarSessao = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params; // ID da sessão vem da URL
+    const { id } = req.params;
     const user = (req as any).user as IUser;
 
     const sessao = await SessaoSalaModel.findById(id);
@@ -149,19 +148,16 @@ export const iniciarSessao = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Sessão não encontrada.' });
     }
 
-    // Verifica se o usuário que está tentando iniciar é o professor da sessão
     if (String(sessao.professor) !== String(user._id)) {
       return res.status(403).json({ message: 'Apenas o professor da turma pode iniciar a atividade.' });
     }
 
-    // Verifica se a sessão já não está em andamento ou finalizada
     if (sessao.status !== 'AGUARDANDO') {
       return res.status(400).json({ message: `A sessão não pode ser iniciada (status atual: ${sessao.status}).` });
     }
 
-    // Atualiza o status e define o tempo de início
     sessao.status = 'EM_ANDAMENTO';
-    sessao.tempoInicio = new Date(); // Registra o momento exato do início
+    sessao.tempoInicio = new Date();
 
     await sessao.save();
 
@@ -173,6 +169,7 @@ export const iniciarSessao = async (req: Request, res: Response) => {
   }
 };
 
+// --- FUNÇÃO PARA RESPONDER QUESTÃO (ATUALIZADA) ---
 export const responderQuestao = async (req: Request, res: Response) => {
   try {
     const { sessaoId, questaoId, resposta } = req.body;
@@ -182,7 +179,6 @@ export const responderQuestao = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Dados da resposta incompletos.' });
     }
 
-    // Encontra a sessão e a questão ao mesmo tempo
     const [sessao, questao] = await Promise.all([
       SessaoSalaModel.findById(sessaoId),
       QuestaoModel.findById(questaoId)
@@ -196,13 +192,11 @@ export const responderQuestao = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Esta atividade não está em andamento.' });
     }
 
-    // Encontra o participante na sessão
     const participante = sessao.participantes.find(p => String(p.alunoId) === String(aluno._id));
     if (!participante) {
       return res.status(403).json({ message: 'Você não é um participante desta sessão.' });
     }
 
-    // Verifica se a questão já foi respondida
     const jaRespondeu = participante.respostas.some(r => String(r.questaoId) === String(questaoId));
     if (jaRespondeu) {
       return res.status(400).json({ message: 'Você já respondeu esta questão.' });
@@ -210,10 +204,21 @@ export const responderQuestao = async (req: Request, res: Response) => {
 
     const acertou = questao.respostaCorreta === resposta;
     if (acertou) {
-      participante.pontuacao += 10; // Adiciona 10 pontos por acerto
+      participante.pontuacao += 10;
     }
 
     participante.respostas.push({ questaoId, acertou });
+
+    // --- LÓGICA ADICIONADA ---
+    // 1. Encontrar o índice da questão que foi respondida
+    const indiceQuestaoRespondida = sessao.questoes.findIndex(id => String(id) === String(questaoId));
+
+    // 2. Atualizar o campo 'questaoAtual' do participante para o próximo índice
+    // Se o aluno respondeu a questão de índice 0, ele agora está na questão de índice 1.
+    if (indiceQuestaoRespondida !== -1) {
+      participante.questaoAtual = indiceQuestaoRespondida + 1;
+    }
+    // --- FIM DA LÓGICA ADICIONADA ---
 
     await sessao.save();
 
@@ -224,6 +229,8 @@ export const responderQuestao = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Erro interno no servidor.' });
   }
 };
+
+// --- FUNÇÃO PARA FINALIZAR SESSÃO ---
 export const finalizarSessao = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -235,7 +242,6 @@ export const finalizarSessao = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Sessão não encontrada.' });
     }
 
-    // Apenas o professor da sessão pode finalizá-la
     if (String(sessao.professor) !== String(user._id)) {
       return res.status(403).json({ message: 'Apenas o professor pode finalizar a atividade.' });
     }
@@ -247,7 +253,6 @@ export const finalizarSessao = async (req: Request, res: Response) => {
     sessao.status = 'FINALIZADA';
     await sessao.save();
 
-    // Populamos os dados antes de enviar de volta, para o ranking funcionar
     await sessao.populate({ path: 'participantes.alunoId', select: 'name' });
 
     res.status(200).json({ message: 'Sessão finalizada com sucesso!', sessao });

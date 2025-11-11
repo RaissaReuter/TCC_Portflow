@@ -1,26 +1,50 @@
-// src/components/SimuladorRedacao.tsx
 "use client"
 
 import { useState } from "react";
-import axios from "axios";
 import toast from 'react-hot-toast';
+import { api } from "@/services/api";
 
 // --- INTERFACES ---
 interface PontoFeedback {
   competencia: string;
   descricao: string;
 }
-
+interface NotasIA {
+  c1: number;
+  c2: number;
+  c3: number;
+  c4: number;
+  c5: number;
+  notaFinal: number;
+}
 interface FeedbackIA {
+  notas: NotasIA;
   analiseGeral: string;
   pontosFortes: PontoFeedback[];
   pontosAMelhorar: PontoFeedback[];
   sugestaoFinal: string;
   errosSugeridos?: { palavra: string; sugestao: string }[];
 }
-
 interface AnaliseResponse {
   feedback: FeedbackIA;
+}
+interface ApiErrorResponse {
+  message: string;
+}
+
+// --- TYPE GUARD ---
+function isApiError(error: unknown): error is { response: { data: ApiErrorResponse } } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    typeof (error as { response?: unknown }).response === 'object' &&
+    (error as { response?: unknown }).response !== null &&
+    'data' in (error as { response: { data?: unknown } }).response &&
+    typeof (error as { response: { data?: unknown } }).response.data === 'object' &&
+    (error as { response: { data?: unknown } }).response.data !== null &&
+    'message' in (error as { response: { data: { message?: unknown } } }).response.data
+  );
 }
 
 const TEMAS_INICIAIS = [
@@ -30,17 +54,13 @@ const TEMAS_INICIAIS = [
   "Impactos da tecnologia digital na vida contemporânea e nas relações sociais",
 ];
 
-// --- COMPONENTE AUXILIAR ---
 const TextoDestacado = ({ texto, erros }: { texto: string; erros: { palavra: string; sugestao: string }[] }) => {
   if (!erros || erros.length === 0) {
     return <p className="whitespace-pre-wrap">{texto}</p>;
   }
-  
-  // Escapa caracteres especiais para usar na Regex
   const escapedWords = erros.map(e => e.palavra.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
   const regex = new RegExp(`(${escapedWords.join('|')})`, 'gi');
   const parts = texto.split(regex);
-
   return (
     <p className="whitespace-pre-wrap">
       {parts.map((part, i) => {
@@ -60,7 +80,6 @@ const TextoDestacado = ({ texto, erros }: { texto: string; erros: { palavra: str
   );
 };
 
-// --- COMPONENTE PRINCIPAL ---
 export default function SimuladorRedacao() {
   const [temaAtual, setTemaAtual] = useState(TEMAS_INICIAIS[0]);
   const [texto, setTexto] = useState('');
@@ -78,40 +97,45 @@ export default function SimuladorRedacao() {
   };
 
   const analisarRedacao = async () => {
-    if (texto.trim().length < 50) {
-      setError('Sua redação precisa ter pelo menos 50 caracteres.');
+    if (texto.trim().length < 150) {
+      setError('Sua redação precisa ter pelo menos 150 caracteres para uma análise completa.');
       return;
     }
     setIsLoading(true);
     setError('');
     setFeedback(null);
-
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        setError("Você precisa estar logado para analisar sua redação.");
-        setIsLoading(false);
-        return;
-      }
-      
-      const response = await axios.post<AnaliseResponse>(
-        'http://localhost:3001/api/redacao/analisar', // Usando a rota correta
-        { tema: temaAtual, texto: texto },
-        { headers: { 'Authorization': `Bearer ${token}` } }
+      const response = await api.post<AnaliseResponse>(
+        '/redacao/analisar',
+        { tema: temaAtual, texto: texto }
       );
-
       console.log("Resposta recebida do backend:", response.data);
-
       setFeedback(response.data.feedback);
       toast.success("Sua redação foi analisada!");
-
-    } catch (error) {
-      console.error("Erro ao analisar redação:", error);
-      setError("Desculpe, não consegui analisar sua redação no momento. Tente novamente.");
+    } catch (err: unknown) {
+      console.error("Erro ao analisar redação:", err);
+      let errorMessage = "Desculpe, não consegui analisar sua redação no momento. Tente novamente.";
+      
+      if (isApiError(err)) {
+        errorMessage = err.response.data.message;
+      }
+      
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const characterCount = texto.length;
+  const maxLength = 7000;
+
+  const getNotaColor = (nota: number) => {
+    if (nota >= 900) return 'text-blue-600';
+    if (nota >= 700) return 'text-green-600';
+    if (nota >= 500) return 'text-yellow-600';
+    return 'text-red-600';
+  }
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
@@ -130,12 +154,20 @@ export default function SimuladorRedacao() {
         </button>
       </div>
 
-      <textarea
-        className="w-full min-h-[300px] p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 transition"
-        placeholder="Comece a escrever sua redação aqui..."
-        value={texto}
-        onChange={(e) => setTexto(e.target.value)}
-      />
+      <div className="relative">
+        <textarea
+          className="w-full min-h-[400px] p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 transition resize-y"
+          placeholder="Comece a escrever sua redação aqui..."
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          maxLength={maxLength}
+        />
+        <div className={`absolute bottom-3 right-3 text-sm font-medium px-2 py-1 rounded
+          ${characterCount > maxLength * 0.9 ? 'text-red-600' : 'text-gray-500'}
+        `}>
+          {characterCount} / {maxLength}
+        </div>
+      </div>
 
       <button
         onClick={analisarRedacao}
@@ -158,7 +190,22 @@ export default function SimuladorRedacao() {
       {error && <div className="mt-4 text-red-500 text-center">{error}</div>}
 
       {feedback && (
-        <div className="mt-6 space-y-6">
+        <div className="mt-8 space-y-8">
+          
+          <div className="bg-gradient-to-br from-teal-50 to-cyan-100 p-6 rounded-2xl text-center border-2 border-teal-200">
+            <p className="text-lg font-semibold text-teal-800">Sua nota estimada é</p>
+            <p className={`text-7xl font-bold my-2 ${getNotaColor(feedback.notas.notaFinal)}`}>
+              {feedback.notas.notaFinal}
+            </p>
+            <div className="grid grid-cols-5 gap-2 text-sm mt-4 text-gray-600">
+              <div>C1: <span className="font-bold">{feedback.notas.c1}</span></div>
+              <div>C2: <span className="font-bold">{feedback.notas.c2}</span></div>
+              <div>C3: <span className="font-bold">{feedback.notas.c3}</span></div>
+              <div>C4: <span className="font-bold">{feedback.notas.c4}</span></div>
+              <div>C5: <span className="font-bold">{feedback.notas.c5}</span></div>
+            </div>
+          </div>
+
           <div className="border p-4 rounded-lg bg-gray-50">
             <h3 className="font-bold text-gray-800 mb-2">Sua Redação Analisada:</h3>
             <TextoDestacado texto={texto} erros={feedback.errosSugeridos || []} />
