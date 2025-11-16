@@ -7,8 +7,6 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { GoogleOAuthProvider, GoogleLogin, CredentialResponse } from '@react-oauth/google';
 
-export const dynamic = 'force-dynamic';
-
 // Interfaces
 interface ApiErrorData { message: string; }
 interface AxiosErrorWithData { response?: { data?: ApiErrorData; }; }
