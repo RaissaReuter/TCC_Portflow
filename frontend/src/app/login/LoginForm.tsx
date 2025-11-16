@@ -31,8 +31,9 @@ export default function LoginForm() {
     setIsLoading(true);
     try {
       const response = await api.post<{ token: string }>('/auth/login', { email, password });
-      
+      console.log("Login bem sucedido, salvando token:", response.data.token");
       localStorage.setItem('authToken', response.data.token);
+      router.push('/');
       toast.success("Login bem-sucedido!");
       const redirectUrl = searchParams.get('redirect') || '/';
       router.push(redirectUrl);

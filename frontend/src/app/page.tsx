@@ -75,13 +75,14 @@ function HomeContent() {
         console.log('📊 Dados recebidos do dashboard:', response.data);
         
         // Verificar se os dados têm a estrutura esperada
-        if (response.data && response.data.progress) {
-          setDashboardData(response.data as DashboardData);
+        const data = response.data as Partial<DashboardData> | undefined;
+        if (data && data.progress) {
+          setDashboardData(data as DashboardData);
         } else {
           console.warn('⚠️ Dados do dashboard não têm a estrutura esperada:', response.data);
           // Criar dados padrão se necessário
           const defaultData: DashboardData = {
-            userName: response.data?.userName || 'Usuário',
+            userName: (data && data.userName) || 'Usuário',
             progress: {
               grammarLesson: { hasStarted: false, progressPercentage: 0, title: 'Gramática' },
               writingLesson: { hasStarted: false, progressPercentage: 0, title: 'Redação' },
