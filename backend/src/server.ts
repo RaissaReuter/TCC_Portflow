@@ -29,8 +29,8 @@ const PORT = process.env.PORT || 3001;
 const allowedOrigins = [
   'http://localhost:3000', // Frontend em desenvolvimento local
   'https://portflow-git-final-raissareuters-projects.vercel.app', // URL principal da Vercel
-  'https://tcc-portflow-phg6.onrender.com' // URL do frontend que seu primo usou
-  // Adicione aqui a URL final do seu frontend quando tiver
+  'https://tcc-portflow-phg6.onrender.com', 
+  'https://portflow-git-teste-raissareuters-projects.vercel.app' 
 ];
 
 const corsOptions: cors.CorsOptions = {
@@ -46,7 +46,6 @@ const corsOptions: cors.CorsOptions = {
 };
 
 app.use(cors());
-app.use(express.json());
 
 console.log(">>> [PASSO 4] Middlewares (cors, json) configurados.");
 
