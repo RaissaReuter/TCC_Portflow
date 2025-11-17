@@ -1,47 +1,40 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 const connectDB = async () => {
   try {
-    console.log('🔍 DEBUG: Verificando variáveis de ambiente...');
-    console.log('MONGO_URI:', process.env.MONGO_URI ? 'DEFINIDA' : 'NÃO DEFINIDA');
-    console.log('MONGO_USER:', process.env.MONGO_USER ? 'DEFINIDA' : 'NÃO DEFINIDA');
-    console.log('MONGO_KEY:', process.env.MONGO_KEY ? 'DEFINIDA (****)' : 'NÃO DEFINIDA');
-    console.log('MONGO_HOST:', process.env.MONGO_HOST || 'NÃO DEFINIDA (usando padrão)');
-    console.log('MONGO_DATABASE:', process.env.MONGO_DATABASE || 'NÃO DEFINIDA (usando padrão)');
-    
-    let mongoURI = process.env.MONGO_URI;
-    
-    // Se MONGO_USER e MONGO_KEY estão definidos, construir a URI com autenticação
-    if (process.env.MONGO_USER && process.env.MONGO_KEY) {
-      const mongoUser = process.env.MONGO_USER;
-      const mongoKey = process.env.MONGO_KEY;
-      const mongoHost = process.env.MONGO_HOST || 'cluster0.pargnln.mongodb.net';
-      const mongoDatabase = process.env.MONGO_DATABASE || '';
-      const appName = process.env.MONGO_APP_NAME || 'Cluster0';
-      
-      mongoURI = `mongodb+srv://${mongoUser}:${mongoKey}@${mongoHost}/${mongoDatabase}?retryWrites=true&w=majority&appName=${appName}`;
-      console.log('🔧 URI construída com variáveis de ambiente');
-      console.log('🔗 Host usado:', mongoHost);
-    } else {
-      console.log('🔧 Usando MONGO_URI direta');
-    }
-    
-    if (!mongoURI) {
-      console.error('❌ MongoDB connection string is not properly configured. Please set MONGO_URI or MONGO_USER/MONGO_KEY in .env file');
-      process.exit(1);
-    }
+    const mongoUri = process.env.MONGO_URI;
 
+    if (!mongoUri) {
+      console.error('--------------------------------------------------');
+      console.error('ERRO FATAL: A variável de ambiente MONGO_URI não foi definida.');
+      console.error('--------------------------------------------------');
+      // Lançar um erro força o Node.js a parar de uma forma que os logs são geralmente capturados.
+      throw new Error('MONGO_URI não definida.');
+    }
+    
     console.log('🚀 Tentando conectar ao MongoDB...');
-    await mongoose.connect(mongoURI);
-    console.log('✅ MongoDB Connected successfully!');
-  } catch (err: any) {
-    console.error('❌ MongoDB connection error:', err.message);
-    console.error('📋 Full error details:', err);
-    // Exit process with failure
-    process.exit(1);
+    // Adicionamos um log para ver a URI que está sendo usada (sem a senha)
+    // Isso ajuda a depurar se o nome do cluster ou usuário estão corretos.
+    console.log(`🔗 Usando URI: ${mongoUri.replace(/:([^:]+)@/, ':*****@')}`);
+
+    const conn = await mongoose.connect(mongoUri);
+
+    console.log(`✅ MongoDB Conectado com sucesso ao host: ${conn.connection.host}`);
+
+  } catch (error) {
+    console.error('--------------------------------------------------');
+    console.error('❌ FALHA NA CONEXÃO COM O MONGODB:');
+    if (error instanceof Error) {
+      // Imprime a mensagem de erro específica do Mongoose
+      console.error(`   Mensagem: ${error.message}`);
+    } else {
+      // Se não for um objeto de erro padrão, imprime o objeto inteiro
+      console.error(error);
+    }
+    console.error('--------------------------------------------------');
+    
+    // Encerra o processo para que o deploy falhe e possamos ver o erro.
+    process.exit(1); 
   }
 };
 

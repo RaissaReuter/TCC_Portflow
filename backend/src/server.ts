@@ -14,6 +14,14 @@ import sessaoSalaRoutes from './routes/sessaoSalaRoutes';
 dotenv.config();
 connectDB();
 
+console.log(">>> [PASSO 1] Iniciando o servidor...");
+
+dotenv.config();
+console.log(">>> [PASSO 2] Variáveis de ambiente (.env) carregadas.");
+
+connectDB();
+console.log(">>> [PASSO 3] Chamada para conectar ao banco de dados realizada.");
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -40,6 +48,9 @@ const corsOptions: cors.CorsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 // --- FIM DA CONFIGURAÇÃO DE CORS ---
+
+app.use(express.json());
+console.log(">>> [PASSO 4] Middlewares (cors, json) configurados.");
 
 app.use(express.json());
 
