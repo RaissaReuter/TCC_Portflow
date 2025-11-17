@@ -1,8 +1,7 @@
-// src/components/Chatbot.tsx
-"use client"
+"use client";
 
 import { useState, useEffect, useRef } from "react";
-import axios from "axios";
+import { api } from "@/services/api"; // 1. IMPORTAR A NOSSA API CENTRALIZADA
 import Image from "next/image";
 
 interface Message {
@@ -16,7 +15,7 @@ export default function Chatbot() {
   ]);
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
-  const [isLoading, setIsLoading] = useState(false); // Para mostrar "Digitando..."
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -27,26 +26,21 @@ export default function Chatbot() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (e?: React.FormEvent) => { // Tornar o evento opcional
+    if (e) e.preventDefault();
     if (inputValue.trim() === '' || isLoading) return;
 
-    const userMessage: Message = { text: inputValue, sender: 'user' };
+    const userMessage = { sender: 'user' as const, text: inputValue };
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsLoading(true);
 
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        setMessages(prev => [...prev, { text: "Você precisa estar logado para falar comigo.", sender: 'assistant' }]);
-        setIsLoading(false);
-        return;
-      }
-
-      const response = await axios.post<{ reply: string }>(
-        'http://localhost:3001/api/chatbot',
-        { message: inputValue },
-        { headers: { 'Authorization': `Bearer ${token}` } }
+      // 2. USAR A INSTÂNCIA 'api' E A ROTA RELATIVA
+      // O token de autorização já é adicionado automaticamente pelo interceptor do 'api.ts'
+      const response = await api.post<{ reply: string }>(
+        '/chatbot',
+        { message: inputValue }
       );
 
       const assistantMessage: Message = { text: response.data.reply, sender: 'assistant' };
@@ -62,7 +56,8 @@ export default function Chatbot() {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey) { // Adicionado !e.shiftKey para permitir quebra de linha
+      e.preventDefault(); // Previne a quebra de linha no input
       handleSendMessage();
     }
   };
@@ -74,7 +69,6 @@ export default function Chatbot() {
           <div className="bg-blue-500 text-white p-3 flex justify-between items-center">
             <h3 className="font-bold">Portinho Assistente</h3>
             <button onClick={() => setIsOpen(false)} className="focus:outline-none">
-              {/* Ícone de minimizar */}
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" /></svg>
             </button>
           </div>
@@ -113,11 +107,10 @@ export default function Chatbot() {
                 disabled={isLoading}
               />
               <button
-                onClick={handleSendMessage}
+                onClick={() => handleSendMessage()} // Modificado para não passar o evento
                 className="bg-blue-500 text-white rounded-full p-2 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-blue-300"
                 disabled={isLoading}
               >
-                {/* Ícone de enviar */}
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
               </button>
             </div>
