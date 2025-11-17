@@ -9,8 +9,8 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Modern Landing Page",
-  description: "A modern and elegant landing page built with Next.js and Tailwind CSS",
+  title: "Portflow - Plataforma de Estudos",
+  description: "Plataforma educacional gamificada para auxiliar estudantes na preparação para o ENEM, com foco em Língua Portuguesa",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
