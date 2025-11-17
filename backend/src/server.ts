@@ -45,11 +45,9 @@ const corsOptions: cors.CorsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
-// --- FIM DA CONFIGURAÇÃO DE CORS ---
-
+app.use(cors());
 app.use(express.json());
+
 console.log(">>> [PASSO 4] Middlewares (cors, json) configurados.");
 
 app.use(express.json());
