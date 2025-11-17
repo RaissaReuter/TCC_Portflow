@@ -1,19 +1,10 @@
 import axios from 'axios';
 
-// Configuração da URL base da API
-const getBaseURL = () => {
-  // Em produção, usa a mesma URL (fullstack)
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
+const baseURL = process.env.NEXT_PUBLIC_API_URL;
   
-  // Para SSR, usa a variável de ambiente ou fallback
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-};
-
 // A partir de agora, usaremos 'api' para todas as chamadas ao backend
 export const api = axios.create({
-  baseURL: getBaseURL(),
+  baseURL: baseURL,
 });
 
 api.interceptors.request.use(
