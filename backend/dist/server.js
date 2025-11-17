@@ -39,6 +39,17 @@ app.use('/api/sessoes-sala', sessaoSalaRoutes_1.default);
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok', message: 'PortFlow API is running!' });
 });
+app.get('/api/debug', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        env_check: {
+            JWT_SECRET: process.env.JWT_SECRET ? 'DEFINIDO' : 'NÃO DEFINIDO',
+            MONGO_USER: process.env.MONGO_USER ? 'DEFINIDO' : 'NÃO DEFINIDO',
+            MONGO_KEY: process.env.MONGO_KEY ? 'DEFINIDO' : 'NÃO DEFINIDO',
+            NODE_ENV: process.env.NODE_ENV || 'NÃO DEFINIDO'
+        }
+    });
+});
 // --- SERVIR ARQUIVOS ESTÁTICOS DO FRONTEND ---
 if (process.env.NODE_ENV === 'production') {
     // Servir arquivos estáticos do Next.js
