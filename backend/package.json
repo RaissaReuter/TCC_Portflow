@@ -11,7 +11,6 @@
     "seed:all": "npm run seed:user && npm run seed:trilha && npm run seed:questoes",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "postbuild": "npm run seed:user",
     "start": "node dist/server.js"
   },
   "keywords": [],
