@@ -1,15 +1,17 @@
 "use client";
 
-import toast from 'react-hot-toast';
 import { useState, useEffect, Suspense } from "react";
+import { useSearchParams, useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
+import axios from "axios";
+import Link from 'next/link';
 import 'react-day-picker/dist/style.css';
+
 import Chatbot from "../components/Chatbot"; 
 import SimuladorRedacao from "../components/SimuladorRedacao";
 import ListaSecoes from "../components/ListaSecoes";
 import DetalheSecao from "../components/DetalheSecao";
 import TelaAula from "../components/TelaAula";
-import { useSearchParams, useRouter } from 'next/navigation';
-import { api } from '@/services/api'; // Importando nosso serviço
 
 // --- INTERFACES ---
 interface ProgressItem {
@@ -27,6 +29,7 @@ interface DashboardData {
   };
 }
 
+// --- COMPONENTE FILHO QUE USA OS HOOKS ---
 function HomeContent() {
   const [currentPage, setCurrentPage] = useState("home");
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
@@ -47,13 +50,6 @@ function HomeContent() {
         return;
       }
 
-      // Verificar se estamos no cliente antes de acessar localStorage
-      if (typeof window === 'undefined') {
-        setCurrentPage('home');
-        setUserSessionChecked(true);
-        return;
-      }
-
       const token = localStorage.getItem('authToken');
 
       if (!token) {
@@ -64,51 +60,24 @@ function HomeContent() {
 
       setCurrentPage('dashboard');
       try {
-        // Primeiro, testar se a API está funcionando
-        console.log('🔍 Testando conexão com /api/health...');
-        const healthResponse = await api.get('/api/health');
-        console.log('✅ API Health check:', healthResponse.data);
-        
-        // --- A ÚNICA CORREÇÃO NECESSÁRIA ---
-        console.log('🔍 Fazendo requisição para /api/dashboard...');
-        const response = await api.get('/api/dashboard');
-        console.log('📊 Dados recebidos do dashboard:', response.data);
-        
-        // Verificar se os dados têm a estrutura esperada
-        const data = response.data as Partial<DashboardData> | undefined;
-        if (data && data.progress) {
-          setDashboardData(data as DashboardData);
-        } else {
-          console.warn('⚠️ Dados do dashboard não têm a estrutura esperada:', response.data);
-          // Criar dados padrão se necessário
-          const defaultData: DashboardData = {
-            userName: (data && data.userName) || 'Usuário',
-            progress: {
-              grammarLesson: { hasStarted: false, progressPercentage: 0, title: 'Gramática' },
-              writingLesson: { hasStarted: false, progressPercentage: 0, title: 'Redação' },
-              figuresOfSpeechLesson: { hasStarted: false, progressPercentage: 0, title: 'Figuras de Linguagem' }
-            }
-          };
-          setDashboardData(defaultData);
-        }
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+        const response = await axios.get(`${apiUrl}/dashboard`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        setDashboardData(response.data as DashboardData);
       } catch (err) {
-        console.error("❌ Erro ao buscar dados do dashboard:", err);
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('authToken');
-        }
+        console.error("Erro ao buscar dados do dashboard:", err);
+        localStorage.removeItem('authToken');
         router.push('/login?error=session_expired'); 
       } finally {
         setUserSessionChecked(true);
       }
     };
-
     inicializarPagina();
   }, [searchParams, router]);
 
   const handleLogout = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('authToken');
-    }
+    localStorage.removeItem('authToken');
     setDashboardData(null);
     setCurrentPage('home');
     toast.success("Você saiu da sua conta.");
@@ -118,23 +87,13 @@ function HomeContent() {
     <div className="min-h-screen bg-gray-50">
       <div className="flex">
         <aside className="w-16 bg-white border-r h-screen sticky top-0 flex flex-col items-center py-4 space-y-4 z-40">
-          <div className="w-10 h-10 bg-gradient-to-br from-orange-300 to-orange-400 rounded-xl flex items-center justify-center shadow-lg">
-            <span>🐱</span>
-          </div>
+          <div className="w-10 h-10 bg-gradient-to-br from-orange-300 to-orange-400 rounded-xl flex items-center justify-center shadow-lg"><span>🐱</span></div>
           <nav className="flex flex-col space-y-3">
-            <div onClick={() => setCurrentPage("dashboard")} className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200" title="Dashboard">
-              <span>🏠</span>
-            </div>
-            <div onClick={() => setCurrentPage("trilha")} className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200" title="Trilha">
-              <span>📚</span>
-            </div>
+            <div onClick={() => setCurrentPage("dashboard")} className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200" title="Dashboard"><span>🏠</span></div>
+            <div onClick={() => setCurrentPage("trilha")} className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200" title="Trilha"><span>📚</span></div>
           </nav>
         </aside>
-        <main className="flex-1 p-4 sm:p-8">
-          <div className="max-w-4xl mx-auto">
-            {children}
-          </div>
-        </main>
+        <main className="flex-1 p-4 sm:p-8"><div className="max-w-4xl mx-auto">{children}</div></main>
       </div>
       <Chatbot />
     </div>
@@ -144,51 +103,24 @@ function HomeContent() {
     <div className="min-h-screen bg-white">
       <header className="bg-white/95 backdrop-blur-sm border-b border-gray-200 px-4 py-4 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-300 to-orange-400 rounded-xl flex items-center justify-center mr-3 shadow-lg">
-              <span className="text-lg">🐱</span>
-            </div>
-            <span className="text-xl font-bold text-gray-800">Portflow</span>
-          </div>
+          <div className="flex items-center"><div className="w-10 h-10 bg-gradient-to-br from-orange-300 to-orange-400 rounded-xl flex items-center justify-center mr-3 shadow-lg"><span className="text-lg">🐱</span></div><span className="text-xl font-bold text-gray-800">Portflow</span></div>
           <div className="hidden md:flex items-center space-x-6">
             <a href="#sobre" className="text-gray-600 hover:text-teal-600 transition-colors font-medium">Sobre</a>
             <a href="#recursos" className="text-gray-600 hover:text-teal-600 transition-colors font-medium">Recursos</a>
             <a href="#contato" className="text-gray-600 hover:text-teal-600 transition-colors font-medium">Contato</a>
-            <a href="/login" className="text-teal-600 hover:text-teal-700 font-medium">
-              Entrar
-            </a>
+            <Link href="/login" className="text-teal-600 hover:text-teal-700 font-medium">Entrar</Link>
           </div>
         </div>
       </header>
       <section className="bg-gradient-to-br from-teal-400 via-teal-500 to-cyan-500 px-4 py-20 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-10 w-20 h-20 bg-white rounded-full"></div>
-          <div className="absolute top-40 right-20 w-16 h-16 bg-white rounded-full"></div>
-          <div className="absolute bottom-20 left-20 w-12 h-12 bg-white rounded-full"></div>
-          <div className="absolute bottom-40 right-10 w-24 h-24 bg-white rounded-full"></div>
-        </div>
         <div className="max-w-6xl mx-auto relative">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="text-white space-y-6">
-              <div className="space-y-4">
-                <h1 className="text-6xl md:text-7xl font-bold leading-tight">Portflow</h1>
-                <div className="w-20 h-1 bg-white/60 rounded-full"></div>
-              </div>
-              <p className="text-xl md:text-2xl leading-relaxed opacity-95 font-light">
-                Sua jornada para aprender português começa aqui.<br />
-                <span className="font-medium">Português nunca foi tão fácil!</span>
-              </p>
+              <div className="space-y-4"><h1 className="text-6xl md:text-7xl font-bold leading-tight">Portflow</h1><div className="w-20 h-1 bg-white/60 rounded-full"></div></div>
+              <p className="text-xl md:text-2xl leading-relaxed opacity-95 font-light">Sua jornada para aprender português começa aqui.<br /><span className="font-medium">Português nunca foi tão fácil!</span></p>
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <a href="/register" className="bg-white text-teal-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-50 hover:scale-105 transition-all duration-200 shadow-lg">
-                  Começar agora
-                </a>
-                <a href="/sala-de-aula" className="border-2 border-white text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-white hover:text-teal-600 transition-all duration-200">
-                  Sala de aula
-                </a>
-              </div>
-              <div className="flex items-center space-x-6 pt-6">
-                <div className="flex items-center space-x-2"><div className="w-3 h-3 bg-white rounded-full"></div><span className="text-white/80 text-sm">Mais de 10.000 alunos</span></div>
-                <div className="flex items-center space-x-2"><div className="w-3 h-3 bg-white rounded-full"></div><span className="text-white/80 text-sm">Certificado reconhecido</span></div>
+                <Link href="/register" className="bg-white text-teal-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-50 hover:scale-105 transition-all duration-200 shadow-lg">Começar agora</Link>
+                <Link href="/sala-de-aula" className="border-2 border-white text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-white hover:text-teal-600 transition-all duration-200">Sala de aula</Link>
               </div>
             </div>
             <div className="flex justify-center relative">
@@ -283,13 +215,13 @@ function HomeContent() {
       <div className="min-h-screen bg-gray-50">
         <div className="fixed left-0 top-0 h-full w-16 bg-white border-r border-gray-200 flex flex-col items-center py-4 space-y-4 z-40">
           <div className="w-10 h-10 bg-gradient-to-br from-orange-300 to-orange-400 rounded-xl flex items-center justify-center shadow-lg"><span className="text-lg">🐱</span></div>
-          <div className="flex flex-col space-y-3">
+          <nav className="flex flex-col space-y-3">
            <div onClick={() => setCurrentPage("dashboard")} className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-teal-200 transition-colors"><span className="text-sm">🏠</span></div>
             <div onClick={() => setCurrentPage("trilha")} className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors" > <span className="text-sm">📚</span> </div>
             <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"><span className="text-sm">🎯</span></div>
             <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"><span className="text-sm">📊</span></div>
             <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"><span className="text-sm">⚙️</span></div>
-          </div>
+          </nav>
         </div>
         <div className="ml-16">
           <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -414,9 +346,10 @@ function HomeContent() {
   }
 }
 
+// --- COMPONENTE PRINCIPAL QUE USA SUSPENSE ---
 export default function Home() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50">Carregando...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Carregando...</div>}>
       <HomeContent />
     </Suspense>
   );
